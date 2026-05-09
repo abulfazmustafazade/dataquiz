@@ -6,11 +6,25 @@ Real vaxt rejimində interaktiv təlim quiz platforması — Kahoot tipli oyunla
 
 ## ✨ Xüsusiyyətlər
 
-- 🎨 **Admin paneli** — Quiz yarat, sual əlavə et, vaxtı saniyə/dəqiqə ilə təyin et
-- 📱 **QR kod ilə qoşulma** — İştirakçılar QR kodu skan edib birbaşa oyuna qoşulur
-- 👥 **Real vaxt sinxronlaşma** — Bütün cihazlar arasında dərhal yenilənir
-- 🏆 **Sürət bonusu** — Tez cavablayan daha çox xal qazanır
-- 📊 **Canlı statistika** — Hər sual üçün düz/səhv/cavabsız sayı və lider lövhəsi
+### 📚 Quiz Kitabxanası
+- **Yüzlərlə quiz saxlaya bilərsiniz** — hamısı brauzerinizdə qalır
+- Quiz axtarışı, redaktə, kopyalama, silmə
+- **Avtomatik saxlama** — yazdıqca itməz
+- **Yedək al / Bərpa et** — JSON faylı kimi export/import
+
+### 🎮 5 Fərqli Sual Tipi
+1. **🎯 Çoxvariantlı (1 cavab)** — 2-4 variant, bir düzgün cavab
+2. **✓ Hə / Yox** — sadə True/False sualları
+3. **☑ Çoxlu seçim** — 2-6 variant, bir neçə düzgün cavab
+4. **✏️ Mətn cavabı** — sərbəst yazma, alternativ cavablarla
+5. **🔢 Sıralama (puzzle)** — elementləri düzgün ardıcıllıqla sıralama
+
+### 🚀 Oyun Xüsusiyyətləri
+- 📱 **QR kod ilə qoşulma** — bir skanla oyuna keç
+- 👥 **Real vaxt sinxronlaşma** — Firebase ilə dərhal yenilənir
+- ⏱ **Çevik vaxt** — saniyə və ya dəqiqə ilə təyin edilir
+- 🏆 **Sürət bonusu** — tez cavablayan daha çox xal qazanır
+- 📊 **Detallı statistika** — hər sual üçün düz/səhv/qismi düz
 - 🥇 **Yekun podyum** — Top 3 qalib göstəricisi
 
 ## 🚀 Tez Quraşdırma (5 dəqiqə)
@@ -18,97 +32,109 @@ Real vaxt rejimində interaktiv təlim quiz platforması — Kahoot tipli oyunla
 ### 1. Firebase layihəsi yaradın
 
 1. [Firebase Console](https://console.firebase.google.com)-a daxil olun
-2. **"Add project"** düyməsinə basın və layihə adı verin (məsələn: `quizlive-mysite`)
-3. Google Analytics söndürün (lazım deyil) və layihəni yaradın
+2. **"Add project"** → layihə adı verin → Google Analytics söndürün → yaradın
 
 ### 2. Realtime Database aktivləşdirin
 
-1. Sol menyudan **"Build" → "Realtime Database"** seçin
-2. **"Create Database"** düyməsinə basın
-3. Region seçin (Avropa üçün `europe-west1` yaxşıdır)
-4. **"Start in test mode"** seçin və bitirin
+1. Sol menyudan **Build → Realtime Database** seçin
+2. **"Create Database"** → region seçin (məs. `europe-west1`)
+3. **"Start in test mode"** → bitirin
 
 ### 3. Web tətbiqini qeydiyyatdan keçirin
 
-1. Layihə əsas səhifəsində **`</>`** ikonuna basın (Web app əlavə et)
-2. Tətbiqə ad verin (məsələn: `quizlive`) və qeydiyyatdan keçirin
-3. **`firebaseConfig`** obyektini kopyalayın — belə görünəcək:
-
-```javascript
-const firebaseConfig = {
-  apiKey: "AIzaSyA...",
-  authDomain: "quizlive-mysite.firebaseapp.com",
-  databaseURL: "https://quizlive-mysite-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "quizlive-mysite",
-  storageBucket: "quizlive-mysite.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abc123"
-};
-```
+1. Layihə əsas səhifəsində **`</>`** ikonuna basın
+2. Tətbiqə ad verin və qeydiyyatdan keçirin
+3. **`firebaseConfig`** obyektini kopyalayın
 
 ### 4. index.html faylını redaktə edin
 
-`index.html` faylında **24-cü sətir** ətrafında `firebaseConfig` obyektini tapın və yuxarıdakı dəyərlərinizlə əvəz edin.
+`index.html` faylında **24-cü sətir** ətrafında `firebaseConfig`-i öz dəyərlərinizlə əvəz edin.
 
-> ⚠️ **Vacib**: `databaseURL` sahəsi mütləq olmalıdır! Əgər Firebase sizə bu dəyəri verməyibsə, Realtime Database səhifəsindən URL-i kopyalayın (`https://...firebasedatabase.app`).
+> ⚠️ `databaseURL` sahəsi mütləq olmalıdır!
 
 ## 📤 GitHub-da Paylaşmaq
 
 ### A. Yeni repo yarat
+1. [GitHub](https://github.com)-da yeni **public** repo yaradın
+2. **"uploading an existing file"** linkinə basın
+3. `index.html` və `README.md` fayllarını yükləyin
 
-1. [GitHub](https://github.com)-da yeni repo yaradın (məsələn: `quizlive`)
-2. **Public** olaraq qoyun (GitHub Pages üçün lazımdır)
+### B. GitHub Pages aktivləşdir
+1. Repo → **Settings → Pages**
+2. **Source**: `Deploy from a branch` → `main` → `/ (root)` → **Save**
+3. 1-2 dəqiqə gözləyin
 
-### B. Faylları yüklə
-
-**Brauzerdən asan üsul:**
-1. Yeni repo səhifəsində **"uploading an existing file"** linkinə basın
-2. `index.html` və `README.md` fayllarını sürüşdürərək yükləyin
-3. **"Commit changes"**
-
-**Terminal ilə:**
-```bash
-git clone https://github.com/SIZIN-USERNAME/quizlive.git
-cd quizlive
-# index.html və README.md fayllarını bura kopyalayın
-git add .
-git commit -m "İlk versiya"
-git push
-```
-
-### C. GitHub Pages aktivləşdir
-
-1. Repo səhifəsində **Settings → Pages** bölməsinə gedin
-2. **"Source"** altında: **`Deploy from a branch`** seçin
-3. **Branch**: `main`, **Folder**: `/ (root)` seçin
-4. **Save** düyməsinə basın
-5. 1-2 dəqiqə gözləyin
-
-Saytınız hazırdır:
-```
-https://SIZIN-USERNAME.github.io/quizlive/
-```
+Saytınız hazır: `https://SIZIN-USERNAME.github.io/REPO-ADI/`
 
 ## 📖 İstifadə Qaydası
 
 ### Admin (təlimçi) tərəfi
-1. Saytı açın və **"Quiz yarat"** seçin
-2. Quiz adını yazın və sualları əlavə edin
-3. Hər sual üçün 4 cavab variantı və düzgün cavabı seçin
-4. Vaxtı saniyə və ya dəqiqə ilə təyin edin
-5. **"Oyunu Başlat"** — 6 rəqəmli PIN və QR kod görünəcək
+
+**Quiz yaratmaq:**
+1. Ana səhifədə **"Admin"** seçin → kitabxana açılır
+2. **"Yeni Quiz"** düyməsi ilə yeni quiz yaradın
+3. Quiz adını yazın (avtomatik saxlanılır)
+4. Aşağıdakı **5 sual tipindən** birini seçin və əlavə edin
+5. Hər sual üçün vaxtı təyin edin
+
+**Quiz idarəsi (kitabxanada):**
+- 🟢 **Başlat** — quizi indi başladır
+- ✏️ **Redaktə** — sualları dəyişir
+- 📋 **Kopyala** — eyni quizdən yeni nüsxə yaradır
+- 🗑 **Sil** — quizi silir
+
+**Yedəkləmə:**
+- **"Yedək al"** — bütün quizləri JSON kimi endirir
+- **"Yedəkdən bərpa et"** — JSON faylından idxal edir
 
 ### İştirakçı tərəfi
-1. QR kodu telefonla skan edin **və ya** sayta gedib **"Oyuna qoşul"** seçin
+1. QR skan edin **və ya** sayta gedib **"Oyuna qoşul"** seçin
 2. PIN-i daxil edin və adınızı yazın
 3. Hostun başlatmasını gözləyin
-4. Sualları cavablandırın
+4. Sual tipinə görə cavab verin:
+   - **Çoxvariantlı/Hə-Yox** — düyməyə basın
+   - **Çoxlu seçim** — bir neçə variant seçin və təsdiqləyin
+   - **Mətn** — cavabı yazın və göndərin
+   - **Sıralama** — elementləri düzgün ardıcıllıqla yığın
+
+## 🎯 Sual Tipləri haqqında detallar
+
+### Çoxvariantlı (1 cavab)
+- 2, 3, və ya 4 variant olar
+- Bir düzgün cavab seçilir
+- Kahoot-vari rəngli formalar (▲ ◆ ● ■)
+
+### Hə / Yox
+- Sürətli True/False sualları üçün
+- 2 böyük rəngli düymə (yaşıl/qırmızı)
+
+### Çoxlu seçim (multi-select)
+- 2-6 variant olar
+- Bir neçə düzgün cavab ola bilər
+- İştirakçı bütün düzgünləri seçməlidir
+- Yalnız tam düzgün cavab xal qazandırır
+
+### Mətn cavabı
+- İştirakçı cavabı sərbəst yazır
+- **Alternativ cavablar** əlavə oluna bilər (məs: "5", "beş")
+- Böyük/kiçik hərflər və əlavə boşluqlar nəzərə alınmır
+- Hər iştirakçının cavabı host ekranında görünür
+
+### Sıralama (puzzle)
+- 3-6 element olar
+- İştirakçılar qarışıq görür və düzgün ardıcıllığa yığır
+- **Qismi xal** sistemi — hər düzgün yer üçün proporsional xal
+- Tarixi hadisələr, addım-addım proseslər üçün ideal
+
+## 💾 Verilənlərin Saxlanması
+
+- **Quiz kitabxanası**: brauzerinizin `localStorage`-ında saxlanılır
+- **Aktiv oyunlar**: Firebase Realtime Database-də
+- **Yedəkləmə**: vaxtaşırı **"Yedək al"** etmək tövsiyə olunur
 
 ## 🔒 Təhlükəsizlik
 
-Test rejimində Firebase qaydaları açıqdır (hər kəs oxuya/yaza bilər). Bu, **demo və daxili istifadə üçün uyğundur**.
-
-İctimai istifadə üçün Firebase Realtime Database qaydalarını məhdudlaşdırın:
+Test rejimində Firebase qaydaları açıqdır. İctimai istifadə üçün qaydaları məhdudlaşdırın:
 
 ```json
 {
@@ -127,17 +153,13 @@ Test rejimində Firebase qaydaları açıqdır (hər kəs oxuya/yaza bilər). Bu
 ## 🛠 Texniki Detallar
 
 - **Frontend**: React 18 (CDN), Tailwind CSS (CDN), Babel (browser)
-- **Backend**: Firebase Realtime Database (pulsuz plan kifayətdir)
-- **Build**: Yox — saf HTML/CSS/JS
+- **Storage**: localStorage (quizlər) + Firebase Realtime Database (oyunlar)
+- **Build**: Yoxdur — saf HTML/CSS/JS
 - **Hosting**: GitHub Pages (pulsuz)
 
 ## 📝 Lisenziya
 
-MIT — istədiyiniz kimi istifadə edin və dəyişdirin.
-
-## 🤝 Töhfə
-
-Pull request-lərə açığam! Problem tapsanız, GitHub Issues-da yazın.
+MIT — istədiyiniz kimi istifadə edin.
 
 ---
 

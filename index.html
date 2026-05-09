@@ -4,19 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>QuizLive! - İnteraktiv Təlim Quiz Platforması</title>
-<meta name="description" content="Real vaxt rejimində interaktiv quiz platforması — Kahoot tipli oyunlar yaradın və paylaşın">
+<meta name="description" content="Real vaxt rejimində interaktiv quiz platforması — 5 fərqli sual tipi ilə">
 
-<!-- Tailwind CSS -->
 <script src="https://cdn.tailwindcss.com"></script>
-
-<!-- React 18 -->
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-
-<!-- Babel for in-browser JSX (development friendly) -->
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-<!-- Firebase v10 (compat mode for global access) -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 
@@ -25,38 +18,26 @@
     font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     -webkit-tap-highlight-color: transparent;
   }
-  @keyframes bounce-soft {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
-  }
+  @keyframes bounce-soft { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
   .animate-bounce-soft { animation: bounce-soft 1s ease-in-out infinite; }
-  .answer-shadow { box-shadow: 0 8px 0 rgba(0,0,0,0.18); }
-  .answer-shadow:active { transform: translateY(4px); box-shadow: 0 4px 0 rgba(0,0,0,0.18); }
+  @keyframes fade-in { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .animate-fade-in { animation: fade-in 0.25s ease-out; }
 </style>
 
-<!-- Hidden Tailwind class hints (so JIT picks up dynamic classes) -->
-<div class="hidden bg-rose-500 hover:bg-rose-600 bg-sky-500 hover:bg-sky-600 bg-amber-400 hover:bg-amber-500 bg-emerald-500 hover:bg-emerald-600"></div>
+<!-- Tailwind class hints -->
+<div class="hidden bg-rose-500 hover:bg-rose-600 bg-sky-500 hover:bg-sky-600 bg-amber-400 hover:bg-amber-500 bg-emerald-500 hover:bg-emerald-600 bg-violet-500 bg-orange-500"></div>
 </head>
 <body class="bg-purple-700">
 <div id="root">
   <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;color:white;font-family:sans-serif;background:linear-gradient(135deg,#7c3aed,#c026d3)">
-    <div style="text-align:center">
-      <div style="font-size:3rem;margin-bottom:1rem">⚡</div>
-      <div style="font-size:1.25rem;font-weight:bold">QuizLive yüklənir...</div>
-    </div>
+    <div style="text-align:center"><div style="font-size:3rem;margin-bottom:1rem">⚡</div><div style="font-size:1.25rem;font-weight:bold">QuizLive yüklənir...</div></div>
   </div>
 </div>
 
 <script type="text/babel" data-presets="react">
 // =====================================================================
-// 🔥 FIREBASE KONFIQURASIYASI
+// 🔥 FIREBASE CONFIG — buraya öz config-inizi yazın
 // =====================================================================
-// Firebase Console-da öz layihənizdən aldığınız config-i bura yazın:
-// https://console.firebase.google.com → Layihə Settings → "Your apps" → Config
-//
-// "Realtime Database" yaratmağı və qaydaları test rejiminə qoymağı unutmayın!
-// =====================================================================
-
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyAb9XY6BLmmjX8Xw7YyFmoOJP55FiY45JU",
@@ -68,28 +49,221 @@ const firebaseConfig = {
   appId: "1:104656597775:web:1c2b027e8a00aa2f1bc47a",
   measurementId: "G-17FVBBCZ7X"
 };
-
 // =====================================================================
 
 const FIREBASE_OK = firebaseConfig.apiKey !== "YOUR_API_KEY_HERE";
 let db = null;
 if (FIREBASE_OK) {
-  try {
-    firebase.initializeApp(firebaseConfig);
-    db = firebase.database();
-  } catch (e) {
-    console.error("Firebase init error:", e);
-  }
+  try { firebase.initializeApp(firebaseConfig); db = firebase.database(); }
+  catch (e) { console.error("Firebase init error:", e); }
 }
 
 // =====================================================================
-// ICONS (inline SVG - lucide-style)
+// CONSTANTS & UTILS
+// =====================================================================
+const ANSWER_THEMES = [
+  { bg: 'bg-rose-500',    hover: 'hover:bg-rose-600',    shape: '▲', name: 'Üçbucaq' },
+  { bg: 'bg-sky-500',     hover: 'hover:bg-sky-600',     shape: '◆', name: 'Romb' },
+  { bg: 'bg-amber-400',   hover: 'hover:bg-amber-500',   shape: '●', name: 'Dairə' },
+  { bg: 'bg-emerald-500', hover: 'hover:bg-emerald-600', shape: '■', name: 'Kvadrat' },
+  { bg: 'bg-violet-500',  hover: 'hover:bg-violet-600',  shape: '★', name: 'Ulduz' },
+  { bg: 'bg-orange-500',  hover: 'hover:bg-orange-600',  shape: '⬢', name: 'Altıbucaq' },
+];
+
+const QUESTION_TYPES = {
+  multiple_choice: { label: 'Çoxvariantlı (1 cavab)',     icon: '🎯', short: 'Çoxvariantlı' },
+  true_false:      { label: 'Hə / Yox',                    icon: '✓',  short: 'Hə/Yox' },
+  multiple_select: { label: 'Çoxvariantlı (bir neçə cavab)', icon: '☑',  short: 'Çoxlu seçim' },
+  type_answer:     { label: 'Mətn cavabı (sərbəst)',       icon: '✏️', short: 'Mətn' },
+  sorting:         { label: 'Sıralama (puzzle)',           icon: '🔢', short: 'Sıralama' },
+};
+
+const genPin = () => Math.floor(100000 + Math.random() * 900000).toString();
+const genId = () => Math.random().toString(36).slice(2, 11);
+const normalize = (s) => (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+// Fisher-Yates shuffle
+const shuffle = (arr) => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+
+// =====================================================================
+// QUESTION FACTORIES & SCORING
+// =====================================================================
+const createQuestion = (type) => {
+  const base = { id: genId(), type, text: '', timeUnit: 'seconds', timeValue: 20 };
+  switch (type) {
+    case 'multiple_choice': return { ...base, options: ['', '', '', ''], correct: 0 };
+    case 'true_false':      return { ...base, options: ['Hə', 'Yox'], correct: 0 };
+    case 'multiple_select': return { ...base, options: ['', '', '', ''], correctIndices: [0] };
+    case 'type_answer':     return { ...base, acceptableAnswers: [''] };
+    case 'sorting':         return { ...base, items: ['', '', '', ''] };
+    default: return { ...base, options: ['', '', '', ''], correct: 0 };
+  }
+};
+
+const validateQuestion = (q) => {
+  if (!q.text?.trim()) return 'Sual mətni boş ola bilməz';
+  if (!q.timeValue || q.timeValue <= 0) return 'Vaxt 0-dan böyük olmalıdır';
+  switch (q.type) {
+    case 'multiple_choice':
+      if (q.options.length < 2) return 'Ən azı 2 variant olmalıdır';
+      if (q.options.some(o => !o.trim())) return 'Bütün variantları doldurun';
+      break;
+    case 'true_false':
+      // No extra validation needed
+      break;
+    case 'multiple_select':
+      if (q.options.length < 2) return 'Ən azı 2 variant olmalıdır';
+      if (q.options.some(o => !o.trim())) return 'Bütün variantları doldurun';
+      if (!q.correctIndices?.length) return 'Ən azı bir düzgün cavab seçin';
+      break;
+    case 'type_answer':
+      if (!q.acceptableAnswers?.length || q.acceptableAnswers.every(a => !a.trim())) return 'Ən azı bir düzgün cavab daxil edin';
+      break;
+    case 'sorting':
+      if (q.items.length < 2) return 'Ən azı 2 element olmalıdır';
+      if (q.items.some(i => !i.trim())) return 'Bütün elementləri doldurun';
+      break;
+  }
+  return null;
+};
+
+// Returns { correct: bool, points: number, correctness: 0..1 }
+const scoreAnswer = (question, answer, answeredAt, questionStartedAt) => {
+  if (!answer || answer.value === undefined || answer.value === null) return { correct: false, points: 0, correctness: 0 };
+  const totalSec = question.timeUnit === 'minutes' ? question.timeValue * 60 : question.timeValue;
+  const elapsed = (answeredAt - questionStartedAt) / 1000;
+  const speedFactor = Math.max(0, 1 - elapsed / totalSec / 2);
+  let correctness = 0;
+
+  switch (question.type) {
+    case 'multiple_choice':
+    case 'true_false':
+      correctness = answer.value === question.correct ? 1 : 0;
+      break;
+    case 'multiple_select': {
+      const correct = [...(question.correctIndices || [])].sort();
+      const given = [...(answer.value || [])].sort();
+      correctness = (correct.length === given.length && correct.every((v, i) => v === given[i])) ? 1 : 0;
+      break;
+    }
+    case 'type_answer': {
+      const givenN = normalize(answer.value);
+      correctness = (question.acceptableAnswers || []).some(a => normalize(a) === givenN) ? 1 : 0;
+      break;
+    }
+    case 'sorting': {
+      const correct = question.items || [];
+      const given = answer.value || [];
+      let matches = 0;
+      for (let i = 0; i < correct.length; i++) if (given[i] === correct[i]) matches++;
+      correctness = correct.length ? matches / correct.length : 0;
+      break;
+    }
+  }
+
+  if (correctness === 0) return { correct: false, points: 0, correctness: 0 };
+  const points = Math.round(1000 * correctness * (0.5 + speedFactor * 0.5));
+  return { correct: correctness >= 0.5, points, correctness };
+};
+
+// =====================================================================
+// STORAGE
+// =====================================================================
+const QUIZ_LIBRARY_KEY = 'quizlive_library_v1';
+
+const quizLib = {
+  getAll: () => {
+    try {
+      const raw = localStorage.getItem(QUIZ_LIBRARY_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  },
+  save: (quiz) => {
+    const all = quizLib.getAll();
+    const idx = all.findIndex(q => q.id === quiz.id);
+    const updated = { ...quiz, updatedAt: Date.now() };
+    if (idx >= 0) all[idx] = updated;
+    else all.unshift({ ...updated, createdAt: Date.now() });
+    localStorage.setItem(QUIZ_LIBRARY_KEY, JSON.stringify(all));
+    return updated;
+  },
+  delete: (id) => {
+    const all = quizLib.getAll().filter(q => q.id !== id);
+    localStorage.setItem(QUIZ_LIBRARY_KEY, JSON.stringify(all));
+  },
+  duplicate: (id) => {
+    const all = quizLib.getAll();
+    const orig = all.find(q => q.id === id);
+    if (!orig) return null;
+    const copy = {
+      ...JSON.parse(JSON.stringify(orig)),
+      id: genId(),
+      title: orig.title + ' (kopya)',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      questions: orig.questions.map(q => ({ ...q, id: genId() })),
+    };
+    all.unshift(copy);
+    localStorage.setItem(QUIZ_LIBRARY_KEY, JSON.stringify(all));
+    return copy;
+  },
+  exportAll: () => {
+    const data = quizLib.getAll();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `quizlive-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
+  import: (jsonText) => {
+    try {
+      const data = JSON.parse(jsonText);
+      if (!Array.isArray(data)) throw new Error('Invalid format');
+      const existing = quizLib.getAll();
+      const merged = [...data.map(q => ({ ...q, id: q.id || genId() })), ...existing];
+      // Deduplicate by id
+      const seen = new Set();
+      const unique = merged.filter(q => seen.has(q.id) ? false : seen.add(q.id));
+      localStorage.setItem(QUIZ_LIBRARY_KEY, JSON.stringify(unique));
+      return data.length;
+    } catch (e) { return -1; }
+  },
+};
+
+const gameAPI = {
+  get: async (pin) => {
+    if (!db) return null;
+    try { const s = await db.ref(`games/${pin}`).once('value'); return s.val(); }
+    catch (e) { console.error(e); return null; }
+  },
+  set: async (pin, data) => {
+    if (!db) return false;
+    try { await db.ref(`games/${pin}`).set(data); return true; }
+    catch (e) { console.error(e); return false; }
+  },
+  listen: (pin, callback) => {
+    if (!db) return () => {};
+    const ref = db.ref(`games/${pin}`);
+    const handler = (s) => callback(s.val());
+    ref.on('value', handler);
+    return () => ref.off('value', handler);
+  },
+};
+
+// =====================================================================
+// ICONS
 // =====================================================================
 const SVG = ({ children, size = 20, className = '', sw = 2 }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24"
-       fill="none" stroke="currentColor" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" className={className}>
-    {children}
-  </svg>
+  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
 );
 const I = {
   Plus:    (p) => <SVG {...p}><path d="M12 5v14M5 12h14"/></SVG>,
@@ -114,72 +288,32 @@ const I = {
   LogIn:   (p) => <SVG {...p}><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></SVG>,
   Phone:   (p) => <SVG {...p}><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></SVG>,
   Arrow:   (p) => <SVG {...p}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></SVG>,
+  Copy:    (p) => <SVG {...p}><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></SVG>,
+  Save:    (p) => <SVG {...p}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></SVG>,
+  Download:(p) => <SVG {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></SVG>,
+  Upload:  (p) => <SVG {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></SVG>,
+  Search:  (p) => <SVG {...p}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></SVG>,
+  Library: (p) => <SVG {...p}><path d="M16 6l4 14M12 6v14M8 8v12M4 4v16"/></SVG>,
 };
 
 // =====================================================================
-// ANSWER THEMES (Kahoot-style colored shapes)
+// FIREBASE WARNING
 // =====================================================================
-const ANSWER_THEMES = [
-  { bg: 'bg-rose-500',    hover: 'hover:bg-rose-600',    shape: '▲', name: 'Üçbucaq' },
-  { bg: 'bg-sky-500',     hover: 'hover:bg-sky-600',     shape: '◆', name: 'Romb' },
-  { bg: 'bg-amber-400',   hover: 'hover:bg-amber-500',   shape: '●', name: 'Dairə' },
-  { bg: 'bg-emerald-500', hover: 'hover:bg-emerald-600', shape: '■', name: 'Kvadrat' },
-];
-
-const genPin = () => Math.floor(100000 + Math.random() * 900000).toString();
-const genId  = () => Math.random().toString(36).slice(2, 11);
-
-// =====================================================================
-// FIREBASE STORAGE LAYER
-// =====================================================================
-const gameAPI = {
-  get: async (pin) => {
-    if (!db) return null;
-    try {
-      const snap = await db.ref(`games/${pin}`).once('value');
-      return snap.val();
-    } catch (e) { console.error(e); return null; }
-  },
-  set: async (pin, data) => {
-    if (!db) return false;
-    try { await db.ref(`games/${pin}`).set(data); return true; }
-    catch (e) { console.error(e); return false; }
-  },
-  // Real-time listener — much better than polling
-  listen: (pin, callback) => {
-    if (!db) return () => {};
-    const ref = db.ref(`games/${pin}`);
-    const handler = (snap) => callback(snap.val());
-    ref.on('value', handler);
-    return () => ref.off('value', handler);
-  },
-};
-
-// =====================================================================
-// FIREBASE SETUP WARNING SCREEN
-// =====================================================================
-const FirebaseSetupWarning = () => (
+const FirebaseWarning = () => (
   <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-6 flex items-center justify-center">
     <div className="max-w-2xl w-full bg-white rounded-3xl shadow-2xl p-8">
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center">
-          <I.Alert size={28} className="text-amber-600" />
-        </div>
+        <div className="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center"><I.Alert size={28} className="text-amber-600" /></div>
         <h1 className="text-2xl font-black text-gray-900">Firebase qurulmayıb</h1>
       </div>
-      <p className="text-gray-700 mb-4">
-        Saytın işləməsi üçün Firebase Realtime Database lazımdır. Aşağıdakı addımları izləyin:
-      </p>
+      <p className="text-gray-700 mb-4">Saytın işləməsi üçün Firebase Realtime Database lazımdır:</p>
       <ol className="space-y-3 text-gray-700 mb-6 list-decimal list-inside">
-        <li><a href="https://console.firebase.google.com" target="_blank" className="text-purple-600 font-bold hover:underline">Firebase Console</a>-a daxil olun və yeni layihə yaradın (pulsuzdur)</li>
-        <li>Sol menyudan <b>"Realtime Database"</b> seçin və <b>"Create Database"</b>-ə basın</li>
-        <li>Region seçin və <b>"Test mode"</b>-da başladın</li>
-        <li>Layihə Settings → "General" → "Your apps" → Web tətbiqi əlavə edin</li>
-        <li><code className="bg-gray-100 px-2 py-1 rounded">firebaseConfig</code> obyektini kopyalayın və <code className="bg-gray-100 px-2 py-1 rounded">index.html</code>-də əvəz edin</li>
+        <li><a href="https://console.firebase.google.com" target="_blank" className="text-purple-600 font-bold hover:underline">Firebase Console</a>-a daxil olun və yeni layihə yaradın</li>
+        <li>Sol menyudan <b>Realtime Database</b> → <b>Create Database</b> → <b>Test mode</b></li>
+        <li>Project Settings → Web app əlavə edin və <code className="bg-gray-100 px-2 py-1 rounded">firebaseConfig</code>-i kopyalayın</li>
+        <li><code className="bg-gray-100 px-2 py-1 rounded">index.html</code>-də 24-cü sətirdəki config-i əvəz edin</li>
       </ol>
-      <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-4 text-sm text-purple-900">
-        <b>Tam təlimat:</b> README.md faylına baxın
-      </div>
+      <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-4 text-sm text-purple-900"><b>Tam təlimat:</b> README.md faylına baxın</div>
     </div>
   </div>
 );
@@ -197,16 +331,24 @@ function App() {
   const [nameInput, setNameInput] = React.useState('');
   const [error, setError] = React.useState('');
 
-  const [quizTitle, setQuizTitle] = React.useState('Yeni Quiz');
-  const [questions, setQuestions] = React.useState([]);
-  const [editing, setEditing] = React.useState(null);
+  // Library state
+  const [library, setLibrary] = React.useState(() => quizLib.getAll());
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [editingQuiz, setEditingQuiz] = React.useState(null); // current quiz being edited
+  const [editingQuestion, setEditingQuestion] = React.useState(null); // {qIdx, draft}
+  const [showSaved, setShowSaved] = React.useState(false);
 
-  const [selectedAnswer, setSelectedAnswer] = React.useState(null);
+  // Player state
+  const [selectedAnswer, setSelectedAnswer] = React.useState(null); // for MC/TF
+  const [multiSelectedAnswers, setMultiSelectedAnswers] = React.useState([]);
+  const [textAnswer, setTextAnswer] = React.useState('');
+  const [sortingState, setSortingState] = React.useState({ slots: [], pool: [] });
   const [answerLocked, setAnswerLocked] = React.useState(false);
   const [, setTick] = React.useState(0);
 
   const lastQuestionIdx = React.useRef(-1);
   const autoEndedRef = React.useRef({});
+  const fileInputRef = React.useRef(null);
 
   // Auto-fill PIN if scanned QR contains ?pin=XXX
   React.useEffect(() => {
@@ -225,18 +367,14 @@ function App() {
       'player-lobby', 'player-playing', 'player-answered', 'player-result', 'player-final',
     ];
     if (!pin || !liveViews.includes(view)) return;
-
     const unsubscribe = gameAPI.listen(pin, (g) => {
       if (!g) return;
       setGame(g);
-
-      // Player auto-transitions
       if (view.startsWith('player-')) {
         if (g.status === 'playing') {
           if (view === 'player-lobby' || lastQuestionIdx.current !== g.currentQuestionIndex) {
+            initPlayerForQuestion(g);
             setView('player-playing');
-            setSelectedAnswer(null);
-            setAnswerLocked(false);
             lastQuestionIdx.current = g.currentQuestionIndex;
           }
         } else if (g.status === 'showing_results' && view !== 'player-result') {
@@ -246,22 +384,20 @@ function App() {
         }
       }
     });
-
     return unsubscribe;
   }, [pin, view]);
 
-  // Timer tick for live countdown rendering
+  // Timer tick
   React.useEffect(() => {
     if (view !== 'host-question' && view !== 'player-playing') return;
     const t = setInterval(() => setTick(x => x + 1), 250);
     return () => clearInterval(t);
   }, [view]);
 
-  // Auto-end question when timer hits 0 (host only)
+  // Auto-end question on timeout
   React.useEffect(() => {
     if (view !== 'host-question' || !game) return;
-    const q = game.questions[game.currentQuestionIndex];
-    if (!q) return;
+    const q = game.questions[game.currentQuestionIndex]; if (!q) return;
     const totalSec = q.timeUnit === 'minutes' ? q.timeValue * 60 : q.timeValue;
     const elapsed = (Date.now() - game.questionStartedAt) / 1000;
     const key = `${pin}-${game.currentQuestionIndex}`;
@@ -271,59 +407,134 @@ function App() {
     }
   });
 
-  // ============= HANDLERS =============
+  // ==================== HELPERS ====================
+  const initPlayerForQuestion = (g) => {
+    const q = g.questions[g.currentQuestionIndex];
+    setSelectedAnswer(null);
+    setMultiSelectedAnswers([]);
+    setTextAnswer('');
+    setAnswerLocked(false);
+    if (q?.type === 'sorting') {
+      const shuffled = shuffle(q.items.map((item, idx) => ({ item, originalIdx: idx })));
+      setSortingState({ slots: q.items.map(() => null), pool: shuffled });
+    }
+  };
+
+  const refreshLibrary = () => setLibrary(quizLib.getAll());
+
+  const showSavedToast = () => {
+    setShowSaved(true);
+    setTimeout(() => setShowSaved(false), 1200);
+  };
+
   const goHome = () => {
     setView('home'); setPin(null); setGame(null); setError('');
     setPinInput(''); setNameInput(''); setPlayerId(null); setPlayerName('');
-    setSelectedAnswer(null); setAnswerLocked(false);
+    setSelectedAnswer(null); setMultiSelectedAnswers([]); setTextAnswer('');
+    setAnswerLocked(false); setEditingQuiz(null); setEditingQuestion(null);
     lastQuestionIdx.current = -1; autoEndedRef.current = {};
     if (window.location.search) window.history.replaceState({}, '', window.location.pathname);
   };
 
-  const startAdminFlow = () => {
-    setQuizTitle('Yeni Quiz');
-    setQuestions([{
+  // ==================== ADMIN HANDLERS ====================
+  const openLibrary = () => { refreshLibrary(); setView('admin-library'); };
+
+  const createNewQuiz = () => {
+    const newQuiz = {
       id: genId(),
-      text: 'Azərbaycanın paytaxtı hansı şəhərdir?',
-      options: ['Bakı', 'Gəncə', 'Sumqayıt', 'Şəki'],
-      correct: 0, timeUnit: 'seconds', timeValue: 20,
-    }]);
-    setView('admin-list');
+      title: 'Yeni Quiz',
+      questions: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    quizLib.save(newQuiz);
+    refreshLibrary();
+    setEditingQuiz(newQuiz);
+    setView('admin-quiz-edit');
   };
 
-  const addNewQuestion = () => {
-    setEditing({ index: -1, draft: { id: genId(), text: '', options: ['','','',''], correct: 0, timeUnit: 'seconds', timeValue: 20 } });
-    setError(''); setView('admin-edit');
+  const editQuiz = (id) => {
+    const q = quizLib.getAll().find(x => x.id === id);
+    if (!q) return;
+    setEditingQuiz(q);
+    setView('admin-quiz-edit');
   };
-  const editQuestion = (idx) => {
-    setEditing({ index: idx, draft: { ...questions[idx], options: [...questions[idx].options] } });
-    setError(''); setView('admin-edit');
+
+  const deleteQuizFromLib = (id) => {
+    if (!window.confirm('Bu quizi silmək istədiyinizdən əminsiniz?')) return;
+    quizLib.delete(id); refreshLibrary();
   };
-  const saveQuestionDraft = () => {
-    const d = editing.draft;
-    if (!d.text.trim()) { setError('Sual mətni boş ola bilməz'); return; }
-    if (d.options.some(o => !o.trim())) { setError('Bütün cavab variantları doldurulmalıdır'); return; }
-    if (!d.timeValue || d.timeValue <= 0) { setError('Vaxt 0-dan böyük olmalıdır'); return; }
+
+  const duplicateQuizInLib = (id) => {
+    quizLib.duplicate(id); refreshLibrary();
+  };
+
+  const updateEditingQuiz = (patch) => {
+    const updated = { ...editingQuiz, ...patch };
+    setEditingQuiz(updated);
+    quizLib.save(updated);
+    refreshLibrary();
+    showSavedToast();
+  };
+
+  const addQuestionToQuiz = (type) => {
+    const newQ = createQuestion(type);
+    setEditingQuestion({ qIdx: -1, draft: newQ });
     setError('');
-    const newQs = [...questions];
-    if (editing.index === -1) newQs.push(d); else newQs[editing.index] = d;
-    setQuestions(newQs); setEditing(null); setView('admin-list');
+    setView('admin-question-edit');
   };
-  const deleteQuestion = (idx) => setQuestions(questions.filter((_, i) => i !== idx));
 
-  const startGame = async () => {
-    if (questions.length === 0) { setError('Ən azı bir sual əlavə edin'); return; }
+  const editQuestionInQuiz = (idx) => {
+    const q = editingQuiz.questions[idx];
+    setEditingQuestion({ qIdx: idx, draft: JSON.parse(JSON.stringify(q)) });
+    setError('');
+    setView('admin-question-edit');
+  };
+
+  const saveQuestionDraft = () => {
+    const err = validateQuestion(editingQuestion.draft);
+    if (err) { setError(err); return; }
+    const newQs = [...editingQuiz.questions];
+    if (editingQuestion.qIdx === -1) newQs.push(editingQuestion.draft);
+    else newQs[editingQuestion.qIdx] = editingQuestion.draft;
+    updateEditingQuiz({ questions: newQs });
+    setEditingQuestion(null);
+    setError('');
+    setView('admin-quiz-edit');
+  };
+
+  const deleteQuestionFromQuiz = (idx) => {
+    if (!window.confirm('Bu sualı silmək istəyirsiniz?')) return;
+    const newQs = editingQuiz.questions.filter((_, i) => i !== idx);
+    updateEditingQuiz({ questions: newQs });
+  };
+
+  const startGameFromQuiz = async (quiz) => {
+    if (!quiz.questions.length) { alert('Bu quizdə sual yoxdur!'); return; }
     const newPin = genPin();
     const gameData = {
-      pin: newPin, title: quizTitle, questions,
+      pin: newPin, title: quiz.title, questions: quiz.questions,
       status: 'lobby', currentQuestionIndex: -1, questionStartedAt: 0,
       players: {}, answers: {}, createdAt: Date.now(),
     };
     const ok = await gameAPI.set(newPin, gameData);
-    if (!ok) { setError('Oyun yaradılarkən xəta baş verdi. Firebase əlaqəsini yoxlayın.'); return; }
-    setPin(newPin); setGame(gameData); setError(''); setView('host-lobby');
+    if (!ok) { alert('Oyun yaradılarkən xəta. Firebase əlaqəsini yoxlayın.'); return; }
+    setPin(newPin); setGame(gameData); setView('host-lobby');
   };
 
+  const handleImport = (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const count = quizLib.import(ev.target.result);
+      if (count === -1) alert('Fayl formatı yanlışdır');
+      else { alert(`${count} quiz uğurla idxal edildi!`); refreshLibrary(); }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  // ==================== HOST GAME HANDLERS ====================
   const startQuiz = async () => {
     const g = await gameAPI.get(pin); if (!g) return;
     g.status = 'playing'; g.currentQuestionIndex = 0;
@@ -338,15 +549,10 @@ function App() {
     const q = g.questions[qIdx];
     const ansForQ = g.answers?.[qIdx] || {};
     Object.keys(g.players || {}).forEach(pid => {
-      const a = ansForQ[pid];
-      if (a && a.answer === q.correct) {
-        const totalSec = q.timeUnit === 'minutes' ? q.timeValue * 60 : q.timeValue;
-        const elapsed = (a.answeredAt - g.questionStartedAt) / 1000;
-        const speedFactor = Math.max(0, 1 - elapsed / totalSec / 2);
-        const points = Math.round(1000 * (0.5 + speedFactor * 0.5));
-        g.players[pid].score = (g.players[pid].score || 0) + points;
-        a.correct = true; a.points = points;
-      } else if (a) { a.correct = false; a.points = 0; }
+      const a = ansForQ[pid]; if (!a) return;
+      const result = scoreAnswer(q, a, a.answeredAt, g.questionStartedAt);
+      g.players[pid].score = (g.players[pid].score || 0) + result.points;
+      a.correct = result.correct; a.points = result.points; a.correctness = result.correctness;
     });
     if (!g.answers) g.answers = {}; g.answers[qIdx] = ansForQ;
     await gameAPI.set(pin, g); setGame(g); setView('host-results');
@@ -366,6 +572,7 @@ function App() {
     }
   };
 
+  // ==================== PLAYER HANDLERS ====================
   const joinByPin = async () => {
     if (!/^\d{6}$/.test(pinInput)) { setError('PIN 6 rəqəmdən ibarət olmalıdır'); return; }
     const g = await gameAPI.get(pinInput);
@@ -379,7 +586,7 @@ function App() {
     const g = await gameAPI.get(pin);
     if (!g) { setError('Oyun tapılmadı'); goHome(); return; }
     if (Object.values(g.players || {}).some(p => p.name === nameInput.trim())) {
-      setError('Bu ad artıq götürülüb, başqa ad seçin'); return;
+      setError('Bu ad artıq götürülüb'); return;
     }
     const newId = genId();
     if (!g.players) g.players = {};
@@ -388,18 +595,19 @@ function App() {
     setPlayerId(newId); setPlayerName(nameInput.trim()); setError(''); setView('player-lobby');
   };
 
-  const submitAnswer = async (idx) => {
+  const submitAnswerValue = async (value) => {
     if (answerLocked) return;
-    setSelectedAnswer(idx); setAnswerLocked(true);
+    setAnswerLocked(true);
     const g = await gameAPI.get(pin); if (!g) return;
     const qIdx = g.currentQuestionIndex;
     if (!g.answers) g.answers = {};
     if (!g.answers[qIdx]) g.answers[qIdx] = {};
-    g.answers[qIdx][playerId] = { answer: idx, answeredAt: Date.now() };
-    await gameAPI.set(pin, g); setView('player-answered');
+    g.answers[qIdx][playerId] = { value, answeredAt: Date.now() };
+    await gameAPI.set(pin, g);
+    setView('player-answered');
   };
 
-  // ============= COMPUTED HELPERS =============
+  // ==================== COMPUTED ====================
   const getTimeLeft = () => {
     if (!game || game.currentQuestionIndex < 0) return 0;
     const q = game.questions[game.currentQuestionIndex];
@@ -412,21 +620,14 @@ function App() {
     const total = q.timeUnit === 'minutes' ? q.timeValue * 60 : q.timeValue;
     return Math.max(0, Math.min(100, ((total - (Date.now() - game.questionStartedAt) / 1000) / total) * 100));
   };
-  const getAnsweredCount = () => {
-    if (!game || game.currentQuestionIndex < 0) return 0;
-    return Object.keys(game.answers?.[game.currentQuestionIndex] || {}).length;
-  };
-  const getLeaderboard = () => {
-    if (!game || !game.players) return [];
-    return Object.entries(game.players).map(([id, p]) => ({ id, ...p })).sort((a, b) => (b.score || 0) - (a.score || 0));
-  };
+  const getAnsweredCount = () => game?.currentQuestionIndex < 0 ? 0 : Object.keys(game?.answers?.[game?.currentQuestionIndex] || {}).length;
+  const getLeaderboard = () => game?.players ? Object.entries(game.players).map(([id, p]) => ({ id, ...p })).sort((a, b) => (b.score || 0) - (a.score || 0)) : [];
   const formatTime = (val, unit) => unit === 'minutes' ? `${val} dəq` : `${val} san`;
 
   // =====================================================================
-  // VIEWS
+  // RENDER
   // =====================================================================
-
-  if (!FIREBASE_OK) return <FirebaseSetupWarning />;
+  if (!FIREBASE_OK) return <FirebaseWarning />;
 
   // ---- HOME ----
   if (view === 'home') {
@@ -434,143 +635,335 @@ function App() {
       <div className="min-h-screen bg-gradient-to-br from-violet-600 via-purple-700 to-fuchsia-700 flex items-center justify-center p-4">
         <div className="max-w-2xl w-full">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-24 h-24 bg-white rounded-3xl shadow-2xl mb-6 rotate-3">
-              <I.Sparkles size={48} className="text-purple-600" />
-            </div>
+            <div className="inline-flex items-center justify-center w-24 h-24 bg-white rounded-3xl shadow-2xl mb-6 rotate-3"><I.Sparkles size={48} className="text-purple-600" /></div>
             <h1 className="text-6xl font-black text-white mb-3 tracking-tight drop-shadow-lg">QuizLive!</h1>
             <p className="text-xl text-purple-100 font-medium">Real vaxt rejimində interaktiv təlim quiz platforması</p>
           </div>
           <div className="grid md:grid-cols-2 gap-5">
-            <button onClick={startAdminFlow} className="group bg-white rounded-3xl p-8 shadow-2xl hover:shadow-purple-500/50 transition-all hover:-translate-y-2 text-left">
+            <button onClick={openLibrary} className="group bg-white rounded-3xl p-8 shadow-2xl hover:shadow-purple-500/50 transition-all hover:-translate-y-2 text-left">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center group-hover:bg-purple-600 transition-colors">
-                  <I.Shield size={32} className="text-purple-600 group-hover:text-white transition-colors" />
-                </div>
+                <div className="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center group-hover:bg-purple-600 transition-colors"><I.Shield size={32} className="text-purple-600 group-hover:text-white transition-colors" /></div>
                 <h2 className="text-2xl font-black text-gray-900">Admin</h2>
               </div>
-              <p className="text-gray-600 mb-4">Quiz yarat, sualları əlavə et, vaxtı təyin et və oyunu idarə et.</p>
-              <div className="flex items-center gap-2 text-purple-600 font-bold">Quiz yarat <I.Arrow size={16} /></div>
+              <p className="text-gray-600 mb-4">Quiz kitabxanasını idarə et, sual əlavə et, oyunu başlat.</p>
+              <div className="flex items-center gap-2 text-purple-600 font-bold">Quiz kitabxanası <I.Arrow size={16} /></div>
             </button>
             <button onClick={() => { setView('player-join'); setError(''); setPinInput(''); }} className="group bg-white rounded-3xl p-8 shadow-2xl hover:shadow-pink-500/50 transition-all hover:-translate-y-2 text-left">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-14 h-14 bg-pink-100 rounded-2xl flex items-center justify-center group-hover:bg-pink-600 transition-colors">
-                  <I.Phone size={32} className="text-pink-600 group-hover:text-white transition-colors" />
-                </div>
+                <div className="w-14 h-14 bg-pink-100 rounded-2xl flex items-center justify-center group-hover:bg-pink-600 transition-colors"><I.Phone size={32} className="text-pink-600 group-hover:text-white transition-colors" /></div>
                 <h2 className="text-2xl font-black text-gray-900">İştirakçı</h2>
               </div>
               <p className="text-gray-600 mb-4">PIN kod ilə oyuna qoşul və sualları cavablandır.</p>
               <div className="flex items-center gap-2 text-pink-600 font-bold">Oyuna qoşul <I.Arrow size={16} /></div>
             </button>
           </div>
-          <p className="text-center text-purple-200 mt-10 text-sm">Eyni vaxtda bir neçə cihazdan qoşulmaq olar — məlumatlar real vaxtda sinxronlaşır</p>
+          <p className="text-center text-purple-200 mt-10 text-sm">Eyni vaxtda bir neçə cihazdan qoşulmaq olar</p>
         </div>
       </div>
     );
   }
 
-  // ---- ADMIN: LIST ----
-  if (view === 'admin-list') {
+  // ---- ADMIN: QUIZ LIBRARY ----
+  if (view === 'admin-library') {
+    const filtered = library.filter(q => q.title.toLowerCase().includes(searchQuery.toLowerCase()));
     return (
       <div className="min-h-screen bg-gradient-to-br from-violet-600 via-purple-700 to-fuchsia-700 p-4 sm:p-8">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <button onClick={goHome} className="flex items-center gap-2 text-white hover:bg-white/10 px-4 py-2 rounded-xl transition-colors">
-              <I.Home size={20} /> Ana səhifə
-            </button>
-            <div className="flex items-center gap-2 text-white"><I.Shield size={20} /><span className="font-bold">Admin Panel</span></div>
+        <input ref={fileInputRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
+        <div className="max-w-5xl mx-auto">
+          <div className="flex items-center justify-between mb-6">
+            <button onClick={goHome} className="flex items-center gap-2 text-white hover:bg-white/10 px-4 py-2 rounded-xl transition-colors"><I.Home size={20} /> Ana səhifə</button>
+            <div className="flex items-center gap-2 text-white"><I.Library size={20} /><span className="font-bold">Quiz Kitabxanası</span></div>
           </div>
-          <div className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 mb-6">
-            <label className="block text-sm font-bold text-gray-500 mb-2 uppercase tracking-wider">Quiz Adı</label>
-            <input type="text" value={quizTitle} onChange={(e) => setQuizTitle(e.target.value)}
-              className="w-full text-3xl font-black text-gray-900 border-b-4 border-purple-200 focus:border-purple-600 outline-none pb-2 transition-colors"
-              placeholder="Quizinizin adını yazın..." />
-            <div className="flex items-center gap-4 mt-4 text-sm text-gray-600">
-              <span className="flex items-center gap-1"><I.Target size={16} /> {questions.length} sual</span>
-              <span className="flex items-center gap-1"><I.Timer size={16} /> {questions.reduce((s, q) => s + (q.timeUnit === 'minutes' ? q.timeValue * 60 : q.timeValue), 0)} saniyə ümumi</span>
+
+          <div className="bg-white rounded-3xl shadow-2xl p-6 mb-6">
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+              <div className="flex-1 relative">
+                <I.Search size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Quiz axtar..."
+                  className="w-full pl-11 pr-4 py-3 bg-gray-100 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-purple-500" />
+              </div>
+              <button onClick={createNewQuiz} className="bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 text-white font-bold rounded-xl px-6 py-3 flex items-center justify-center gap-2 shadow-lg">
+                <I.Plus size={20} /> Yeni Quiz
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2 text-sm">
+              <button onClick={() => quizLib.exportAll()} className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg px-3 py-1.5 flex items-center gap-1"><I.Download size={14} /> Yedək al</button>
+              <button onClick={() => fileInputRef.current?.click()} className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-lg px-3 py-1.5 flex items-center gap-1"><I.Upload size={14} /> Yedəkdən bərpa et</button>
+              <span className="text-gray-500 ml-auto py-1.5">Cəmi: <b>{library.length}</b> quiz</span>
             </div>
           </div>
+
+          {filtered.length === 0 ? (
+            <div className="bg-white/10 backdrop-blur border-2 border-dashed border-white/30 rounded-3xl p-12 text-center text-white">
+              <I.Library size={64} className="mx-auto mb-4 opacity-50" />
+              <p className="text-xl font-bold mb-2">{library.length === 0 ? 'Hələ heç bir quiz yoxdur' : 'Axtarışa uyğun nəticə yoxdur'}</p>
+              {library.length === 0 && <button onClick={createNewQuiz} className="mt-4 bg-white text-purple-700 font-bold px-6 py-3 rounded-xl">İlk quizi yarat</button>}
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filtered.map(q => (
+                <div key={q.id} className="bg-white rounded-2xl shadow-lg p-5 hover:shadow-2xl transition-shadow flex flex-col">
+                  <h3 className="font-black text-gray-900 mb-2 text-lg break-words line-clamp-2">{q.title}</h3>
+                  <div className="text-sm text-gray-500 mb-3">
+                    <div className="flex items-center gap-1"><I.Target size={14} /> {q.questions.length} sual</div>
+                    <div className="flex items-center gap-1 mt-1"><I.Clock size={14} /> {new Date(q.updatedAt).toLocaleDateString('az-AZ')}</div>
+                  </div>
+                  <div className="flex gap-1 mb-3 flex-wrap">
+                    {[...new Set(q.questions.map(x => x.type))].slice(0, 4).map(t => (
+                      <span key={t} className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-md font-semibold">{QUESTION_TYPES[t]?.icon} {QUESTION_TYPES[t]?.short}</span>
+                    ))}
+                  </div>
+                  <div className="flex gap-2 mt-auto">
+                    <button onClick={() => startGameFromQuiz(q)} disabled={!q.questions.length} className="flex-1 bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-300 text-white font-bold rounded-xl py-2 text-sm flex items-center justify-center gap-1"><I.Play size={14} /> Başlat</button>
+                    <button onClick={() => editQuiz(q.id)} className="bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-xl p-2"><I.Edit size={16} /></button>
+                    <button onClick={() => duplicateQuizInLib(q.id)} className="bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl p-2"><I.Copy size={16} /></button>
+                    <button onClick={() => deleteQuizFromLib(q.id)} className="bg-red-50 hover:bg-red-100 text-red-600 rounded-xl p-2"><I.Trash size={16} /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ---- ADMIN: QUIZ EDIT (questions list) ----
+  if (view === 'admin-quiz-edit' && editingQuiz) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-violet-600 via-purple-700 to-fuchsia-700 p-4 sm:p-8">
+        {showSaved && (
+          <div className="fixed top-4 right-4 z-50 bg-emerald-500 text-white px-4 py-2 rounded-xl shadow-2xl font-bold flex items-center gap-2 animate-fade-in">
+            <I.Check size={18} /> Saxlanıldı
+          </div>
+        )}
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center justify-between mb-6">
+            <button onClick={openLibrary} className="flex items-center gap-2 text-white hover:bg-white/10 px-4 py-2 rounded-xl transition-colors"><I.Left size={20} /> Kitabxana</button>
+          </div>
+
+          <div className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 mb-6">
+            <label className="block text-sm font-bold text-gray-500 mb-2 uppercase tracking-wider">Quiz Adı</label>
+            <input type="text" value={editingQuiz.title} onChange={(e) => updateEditingQuiz({ title: e.target.value })}
+              className="w-full text-3xl font-black text-gray-900 border-b-4 border-purple-200 focus:border-purple-600 outline-none pb-2 transition-colors" />
+            <div className="flex items-center gap-4 mt-4 text-sm text-gray-600">
+              <span className="flex items-center gap-1"><I.Target size={16} /> {editingQuiz.questions.length} sual</span>
+              <span className="flex items-center gap-1"><I.Timer size={16} /> {editingQuiz.questions.reduce((s, q) => s + (q.timeUnit === 'minutes' ? q.timeValue * 60 : q.timeValue), 0)} saniyə</span>
+            </div>
+          </div>
+
           <div className="space-y-3 mb-6">
-            {questions.map((q, idx) => (
-              <div key={q.id} className="bg-white rounded-2xl shadow-lg p-5 hover:shadow-xl transition-shadow">
+            {editingQuiz.questions.map((q, idx) => (
+              <div key={q.id} className="bg-white rounded-2xl shadow-lg p-5">
                 <div className="flex items-start gap-4">
                   <div className="w-10 h-10 bg-purple-600 text-white rounded-xl flex items-center justify-center font-black flex-shrink-0">{idx + 1}</div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-gray-900 mb-2 break-words">{q.text}</h3>
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {q.options.map((opt, i) => (
-                        <span key={i} className={`text-xs px-2 py-1 rounded-lg font-semibold ${i === q.correct ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
-                          {i === q.correct && '✓ '}{opt}
-                        </span>
-                      ))}
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-md font-bold">{QUESTION_TYPES[q.type]?.icon} {QUESTION_TYPES[q.type]?.short}</span>
+                      <span className="text-xs text-gray-500 flex items-center gap-1"><I.Clock size={12} /> {formatTime(q.timeValue, q.timeUnit)}</span>
                     </div>
-                    <div className="text-xs text-gray-500 flex items-center gap-1"><I.Clock size={12} /> {formatTime(q.timeValue, q.timeUnit)}</div>
+                    <h3 className="font-bold text-gray-900 break-words">{q.text || <em className="text-gray-400">(boş sual)</em>}</h3>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <button onClick={() => editQuestion(idx)} className="p-2 hover:bg-purple-100 rounded-lg transition-colors"><I.Edit size={16} className="text-purple-600" /></button>
-                    <button onClick={() => deleteQuestion(idx)} className="p-2 hover:bg-red-100 rounded-lg transition-colors"><I.Trash size={16} className="text-red-600" /></button>
+                    <button onClick={() => editQuestionInQuiz(idx)} className="p-2 hover:bg-purple-100 rounded-lg"><I.Edit size={16} className="text-purple-600" /></button>
+                    <button onClick={() => deleteQuestionFromQuiz(idx)} className="p-2 hover:bg-red-100 rounded-lg"><I.Trash size={16} className="text-red-600" /></button>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-          <button onClick={addNewQuestion} className="w-full bg-white/20 hover:bg-white/30 backdrop-blur border-2 border-dashed border-white/50 text-white font-bold rounded-2xl py-5 transition-colors flex items-center justify-center gap-2 mb-6">
-            <I.Plus size={20} /> Yeni sual əlavə et
-          </button>
-          {error && <div className="bg-red-500 text-white rounded-xl p-4 mb-4 flex items-center gap-2"><I.Alert size={20} /> {error}</div>}
-          <button onClick={startGame} disabled={questions.length === 0}
+
+          <div className="bg-white rounded-3xl shadow-2xl p-6 mb-6">
+            <h3 className="font-black text-gray-900 mb-3">Yeni sual əlavə et:</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+              {Object.entries(QUESTION_TYPES).map(([key, type]) => (
+                <button key={key} onClick={() => addQuestionToQuiz(key)} className="bg-purple-50 hover:bg-purple-100 border-2 border-purple-200 hover:border-purple-400 rounded-xl p-4 text-center transition-all">
+                  <div className="text-3xl mb-1">{type.icon}</div>
+                  <div className="text-xs font-bold text-purple-900 leading-tight">{type.short}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button onClick={() => startGameFromQuiz(editingQuiz)} disabled={editingQuiz.questions.length === 0}
             className="w-full bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed text-white font-black text-xl rounded-2xl py-5 shadow-2xl transition-all hover:scale-[1.02] flex items-center justify-center gap-3">
-            <I.Play size={24} /> Oyunu Başlat
+            <I.Play size={24} /> Bu quizi indi başlat
           </button>
         </div>
       </div>
     );
   }
 
-  // ---- ADMIN: EDIT ----
-  if (view === 'admin-edit' && editing) {
-    const d = editing.draft;
-    const updateDraft = (patch) => setEditing({ ...editing, draft: { ...d, ...patch } });
+  // ---- ADMIN: QUESTION EDIT (type-specific) ----
+  if (view === 'admin-question-edit' && editingQuestion) {
+    const d = editingQuestion.draft;
+    const updateDraft = (patch) => setEditingQuestion({ ...editingQuestion, draft: { ...d, ...patch } });
+    const switchType = (newType) => setEditingQuestion({ ...editingQuestion, draft: { ...createQuestion(newType), id: d.id, text: d.text, timeUnit: d.timeUnit, timeValue: d.timeValue } });
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-violet-600 via-purple-700 to-fuchsia-700 p-4 sm:p-8">
         <div className="max-w-3xl mx-auto">
-          <button onClick={() => { setView('admin-list'); setError(''); }} className="flex items-center gap-2 text-white hover:bg-white/10 px-4 py-2 rounded-xl mb-6 transition-colors"><I.Left size={20} /> Geri</button>
+          <button onClick={() => { setView('admin-quiz-edit'); setError(''); setEditingQuestion(null); }} className="flex items-center gap-2 text-white hover:bg-white/10 px-4 py-2 rounded-xl mb-6"><I.Left size={20} /> Geri</button>
+
           <div className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 mb-6">
-            <h2 className="text-3xl font-black text-gray-900 mb-6">{editing.index === -1 ? 'Yeni sual' : `Sual ${editing.index + 1}`}</h2>
-            <label className="block text-sm font-bold text-gray-700 mb-2">Sual mətni</label>
-            <textarea value={d.text} onChange={(e) => updateDraft({ text: e.target.value })} placeholder="Sualınızı yazın..." rows={3}
-              className="w-full p-4 text-lg border-2 border-gray-200 rounded-xl focus:border-purple-600 outline-none transition-colors resize-none mb-6" />
-            <label className="block text-sm font-bold text-gray-700 mb-3">Cavab variantları (düzgün cavabı seçin)</label>
-            <div className="space-y-3 mb-6">
-              {d.options.map((opt, i) => (
-                <div key={i} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${d.correct === i ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'}`}>
-                  <button onClick={() => updateDraft({ correct: i })} className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-2xl font-black flex-shrink-0 ${ANSWER_THEMES[i].bg}`}>{ANSWER_THEMES[i].shape}</button>
-                  <input type="text" value={opt}
-                    onChange={(e) => { const o = [...d.options]; o[i] = e.target.value; updateDraft({ options: o }); }}
-                    placeholder={`Variant ${i + 1}`} className="flex-1 text-base outline-none bg-transparent" />
-                  <button onClick={() => updateDraft({ correct: i })} className={`w-8 h-8 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${d.correct === i ? 'bg-emerald-500 text-white' : 'bg-gray-200 hover:bg-gray-300'}`} title="Düzgün cavab">
-                    {d.correct === i ? <I.Check size={20} /> : null}
-                  </button>
-                </div>
+            <h2 className="text-2xl font-black text-gray-900 mb-4">{editingQuestion.qIdx === -1 ? 'Yeni sual' : `Sual ${editingQuestion.qIdx + 1}`}</h2>
+
+            <label className="block text-sm font-bold text-gray-700 mb-2">Sual tipi</label>
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-6">
+              {Object.entries(QUESTION_TYPES).map(([key, t]) => (
+                <button key={key} onClick={() => switchType(key)} className={`rounded-xl p-3 text-center text-xs font-bold transition-all border-2 ${d.type === key ? 'bg-purple-600 text-white border-purple-700 shadow-lg' : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-purple-300'}`}>
+                  <div className="text-2xl mb-1">{t.icon}</div>
+                  <div className="leading-tight">{t.short}</div>
+                </button>
               ))}
             </div>
+
+            <label className="block text-sm font-bold text-gray-700 mb-2">Sual mətni</label>
+            <textarea value={d.text} onChange={(e) => updateDraft({ text: e.target.value })} placeholder="Sualınızı yazın..." rows={3}
+              className="w-full p-4 text-lg border-2 border-gray-200 rounded-xl focus:border-purple-600 outline-none resize-none mb-6" />
+
+            {/* Type-specific editors */}
+            {d.type === 'multiple_choice' && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-sm font-bold text-gray-700">Variantlar (düzgün cavabı seçin)</label>
+                  <div className="flex bg-gray-100 rounded-lg p-1 text-sm">
+                    {[2,3,4].map(n => (
+                      <button key={n} onClick={() => {
+                        const opts = [...d.options];
+                        while (opts.length < n) opts.push('');
+                        opts.length = n;
+                        updateDraft({ options: opts, correct: Math.min(d.correct, n-1) });
+                      }} className={`px-3 py-1 rounded-md font-bold ${d.options.length === n ? 'bg-white shadow text-purple-600' : 'text-gray-600'}`}>{n}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {d.options.map((opt, i) => (
+                    <div key={i} className={`flex items-center gap-3 p-3 rounded-xl border-2 ${d.correct === i ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'}`}>
+                      <button onClick={() => updateDraft({ correct: i })} className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-2xl font-black flex-shrink-0 ${ANSWER_THEMES[i].bg}`}>{ANSWER_THEMES[i].shape}</button>
+                      <input type="text" value={opt} onChange={(e) => { const o = [...d.options]; o[i] = e.target.value; updateDraft({ options: o }); }} placeholder={`Variant ${i + 1}`} className="flex-1 outline-none bg-transparent" />
+                      <button onClick={() => updateDraft({ correct: i })} className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${d.correct === i ? 'bg-emerald-500 text-white' : 'bg-gray-200'}`}>{d.correct === i ? <I.Check size={18} /> : null}</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {d.type === 'true_false' && (
+              <div className="mb-6">
+                <label className="block text-sm font-bold text-gray-700 mb-3">Düzgün cavab</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button onClick={() => updateDraft({ correct: 0 })} className={`p-6 rounded-2xl text-white font-black text-2xl transition-all ${d.correct === 0 ? 'bg-emerald-500 ring-4 ring-emerald-300 scale-105' : 'bg-gray-300 hover:bg-emerald-400'}`}>✓ Hə</button>
+                  <button onClick={() => updateDraft({ correct: 1 })} className={`p-6 rounded-2xl text-white font-black text-2xl transition-all ${d.correct === 1 ? 'bg-rose-500 ring-4 ring-rose-300 scale-105' : 'bg-gray-300 hover:bg-rose-400'}`}>✗ Yox</button>
+                </div>
+              </div>
+            )}
+
+            {d.type === 'multiple_select' && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-sm font-bold text-gray-700">Variantlar (bir neçə düzgün)</label>
+                  <div className="flex bg-gray-100 rounded-lg p-1 text-sm">
+                    {[2,3,4,5,6].map(n => (
+                      <button key={n} onClick={() => {
+                        const opts = [...d.options];
+                        while (opts.length < n) opts.push('');
+                        opts.length = n;
+                        updateDraft({ options: opts, correctIndices: (d.correctIndices || []).filter(i => i < n) });
+                      }} className={`px-2 py-1 rounded-md font-bold ${d.options.length === n ? 'bg-white shadow text-purple-600' : 'text-gray-600'}`}>{n}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  {d.options.map((opt, i) => {
+                    const isCorrect = d.correctIndices?.includes(i);
+                    return (
+                      <div key={i} className={`flex items-center gap-3 p-3 rounded-xl border-2 ${isCorrect ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'}`}>
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-2xl font-black flex-shrink-0 ${ANSWER_THEMES[i].bg}`}>{ANSWER_THEMES[i].shape}</div>
+                        <input type="text" value={opt} onChange={(e) => { const o = [...d.options]; o[i] = e.target.value; updateDraft({ options: o }); }} placeholder={`Variant ${i + 1}`} className="flex-1 outline-none bg-transparent" />
+                        <button onClick={() => {
+                          const ci = new Set(d.correctIndices || []);
+                          if (ci.has(i)) ci.delete(i); else ci.add(i);
+                          updateDraft({ correctIndices: [...ci].sort() });
+                        }} className={`w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 border-2 ${isCorrect ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-gray-300'}`}>{isCorrect ? <I.Check size={18} /> : null}</button>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-gray-500 mt-2">İştirakçılar bütün düzgün cavabları seçməlidirlər.</p>
+              </div>
+            )}
+
+            {d.type === 'type_answer' && (
+              <div className="mb-6">
+                <label className="block text-sm font-bold text-gray-700 mb-3">Qəbul edilən cavablar</label>
+                <p className="text-xs text-gray-500 mb-3">İştirakçının cavabı bu siyahıdan biri ilə uyğun olsa, düzgün hesab olunur (böyük/kiçik hərflər və boşluqlar nəzərə alınmır).</p>
+                <div className="space-y-2">
+                  {d.acceptableAnswers.map((ans, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <input type="text" value={ans} onChange={(e) => { const a = [...d.acceptableAnswers]; a[i] = e.target.value; updateDraft({ acceptableAnswers: a }); }} placeholder={i === 0 ? 'Əsas düzgün cavab' : `Alternativ ${i}`} className="flex-1 p-3 border-2 border-gray-200 rounded-xl outline-none focus:border-purple-600" />
+                      {d.acceptableAnswers.length > 1 && (
+                        <button onClick={() => updateDraft({ acceptableAnswers: d.acceptableAnswers.filter((_, j) => j !== i) })} className="p-2 text-red-600 hover:bg-red-50 rounded-lg"><I.Trash size={18} /></button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => updateDraft({ acceptableAnswers: [...d.acceptableAnswers, ''] })} className="mt-2 text-purple-600 font-semibold text-sm flex items-center gap-1"><I.Plus size={16} /> Alternativ cavab əlavə et</button>
+              </div>
+            )}
+
+            {d.type === 'sorting' && (
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-sm font-bold text-gray-700">Elementlər (düzgün ardıcıllıqla)</label>
+                  <div className="flex bg-gray-100 rounded-lg p-1 text-sm">
+                    {[3,4,5,6].map(n => (
+                      <button key={n} onClick={() => {
+                        const items = [...d.items];
+                        while (items.length < n) items.push('');
+                        items.length = n;
+                        updateDraft({ items });
+                      }} className={`px-2 py-1 rounded-md font-bold ${d.items.length === n ? 'bg-white shadow text-purple-600' : 'text-gray-600'}`}>{n}</button>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 mb-3">İştirakçılar elementləri qarışıq görəcək və düzgün ardıcıllıqla sıralayacaqlar.</p>
+                <div className="space-y-2">
+                  {d.items.map((item, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-violet-500 to-purple-600 text-white rounded-xl flex items-center justify-center font-black flex-shrink-0">{i + 1}</div>
+                      <input type="text" value={item} onChange={(e) => { const it = [...d.items]; it[i] = e.target.value; updateDraft({ items: it }); }} placeholder={`Sırada ${i + 1}-ci element`} className="flex-1 p-3 border-2 border-gray-200 rounded-xl outline-none focus:border-purple-600" />
+                      <div className="flex flex-col gap-1">
+                        <button onClick={() => { if (i === 0) return; const it = [...d.items]; [it[i-1], it[i]] = [it[i], it[i-1]]; updateDraft({ items: it }); }} disabled={i === 0} className="px-2 py-0.5 bg-gray-100 hover:bg-gray-200 disabled:opacity-30 rounded text-xs">▲</button>
+                        <button onClick={() => { if (i === d.items.length - 1) return; const it = [...d.items]; [it[i+1], it[i]] = [it[i], it[i+1]]; updateDraft({ items: it }); }} disabled={i === d.items.length - 1} className="px-2 py-0.5 bg-gray-100 hover:bg-gray-200 disabled:opacity-30 rounded text-xs">▼</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Time settings */}
             <label className="block text-sm font-bold text-gray-700 mb-3">Cavab vaxtı</label>
-            <div className="flex gap-3 mb-4">
+            <div className="flex gap-3 mb-3">
               <input type="number" min={1} value={d.timeValue} onChange={(e) => updateDraft({ timeValue: parseInt(e.target.value) || 0 })}
-                className="flex-1 p-4 text-lg border-2 border-gray-200 rounded-xl focus:border-purple-600 outline-none" />
+                className="flex-1 p-4 text-lg border-2 border-gray-200 rounded-xl outline-none focus:border-purple-600" />
               <div className="flex bg-gray-100 rounded-xl p-1">
-                <button onClick={() => updateDraft({ timeUnit: 'seconds' })} className={`px-5 py-2 rounded-lg font-bold transition-colors ${d.timeUnit === 'seconds' ? 'bg-white shadow text-purple-600' : 'text-gray-600'}`}>Saniyə</button>
-                <button onClick={() => updateDraft({ timeUnit: 'minutes' })} className={`px-5 py-2 rounded-lg font-bold transition-colors ${d.timeUnit === 'minutes' ? 'bg-white shadow text-purple-600' : 'text-gray-600'}`}>Dəqiqə</button>
+                <button onClick={() => updateDraft({ timeUnit: 'seconds' })} className={`px-5 py-2 rounded-lg font-bold ${d.timeUnit === 'seconds' ? 'bg-white shadow text-purple-600' : 'text-gray-600'}`}>San</button>
+                <button onClick={() => updateDraft({ timeUnit: 'minutes' })} className={`px-5 py-2 rounded-lg font-bold ${d.timeUnit === 'minutes' ? 'bg-white shadow text-purple-600' : 'text-gray-600'}`}>Dəq</button>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              {[10, 20, 30, 60].map(s => (<button key={s} onClick={() => updateDraft({ timeValue: s, timeUnit: 'seconds' })} className="px-4 py-2 bg-gray-100 hover:bg-purple-100 hover:text-purple-700 rounded-lg text-sm font-semibold transition-colors">{s} san</button>))}
-              {[1, 2, 5].map(m => (<button key={`m${m}`} onClick={() => updateDraft({ timeValue: m, timeUnit: 'minutes' })} className="px-4 py-2 bg-gray-100 hover:bg-purple-100 hover:text-purple-700 rounded-lg text-sm font-semibold transition-colors">{m} dəq</button>))}
+              {[10, 20, 30, 60].map(s => (<button key={s} onClick={() => updateDraft({ timeValue: s, timeUnit: 'seconds' })} className="px-3 py-1.5 bg-gray-100 hover:bg-purple-100 hover:text-purple-700 rounded-lg text-sm font-semibold">{s}s</button>))}
+              {[1, 2, 5].map(m => (<button key={`m${m}`} onClick={() => updateDraft({ timeValue: m, timeUnit: 'minutes' })} className="px-3 py-1.5 bg-gray-100 hover:bg-purple-100 hover:text-purple-700 rounded-lg text-sm font-semibold">{m}dəq</button>))}
             </div>
           </div>
+
           {error && <div className="bg-red-500 text-white rounded-xl p-4 mb-4 flex items-center gap-2"><I.Alert size={20} /> {error}</div>}
           <div className="flex gap-3">
-            <button onClick={() => { setView('admin-list'); setError(''); setEditing(null); }} className="flex-1 bg-white/20 hover:bg-white/30 backdrop-blur text-white font-bold rounded-2xl py-4 transition-colors">Ləğv et</button>
-            <button onClick={saveQuestionDraft} className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-2xl py-4 shadow-xl transition-all hover:scale-[1.02]">Yadda saxla</button>
+            <button onClick={() => { setView('admin-quiz-edit'); setError(''); setEditingQuestion(null); }} className="flex-1 bg-white/20 hover:bg-white/30 backdrop-blur text-white font-bold rounded-2xl py-4">Ləğv</button>
+            <button onClick={saveQuestionDraft} className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-2xl py-4 shadow-xl">Yadda saxla</button>
           </div>
         </div>
       </div>
@@ -586,18 +979,15 @@ function App() {
       <div className="min-h-screen bg-gradient-to-br from-violet-600 via-purple-700 to-fuchsia-700 p-4 sm:p-8">
         <div className="max-w-6xl mx-auto">
           <div className="flex items-center justify-between mb-6">
-            <button onClick={goHome} className="flex items-center gap-2 text-white hover:bg-white/10 px-4 py-2 rounded-xl transition-colors"><I.Home size={20} /> Ana səhifə</button>
+            <button onClick={goHome} className="flex items-center gap-2 text-white hover:bg-white/10 px-4 py-2 rounded-xl"><I.Home size={20} /> Ana səhifə</button>
             <h2 className="text-white font-bold text-lg truncate ml-4">{game.title}</h2>
           </div>
           <div className="grid md:grid-cols-2 gap-6 mb-6">
             <div className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 text-center">
-              <p className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Qoşulmaq üçün</p>
-              <p className="text-base text-gray-700 mb-2">PIN kod:</p>
+              <p className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Qoşulmaq üçün PIN:</p>
               <div className="text-7xl sm:text-8xl font-black text-purple-600 tracking-wider mb-4 select-all">{pin}</div>
-              <div className="bg-gray-50 rounded-2xl p-4 inline-block">
-                <img src={qrUrl} alt="QR Code" className="w-48 h-48 mx-auto" />
-              </div>
-              <p className="text-sm text-gray-500 mt-3">QR kodu skan et və ya sayta gedib PIN-i daxil et</p>
+              <div className="bg-gray-50 rounded-2xl p-4 inline-block"><img src={qrUrl} alt="QR" className="w-48 h-48 mx-auto" /></div>
+              <p className="text-sm text-gray-500 mt-3">QR skan et və ya saytda PIN-i daxil et</p>
               <p className="text-xs text-gray-400 mt-1 break-all">{playerUrl}</p>
             </div>
             <div className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8">
@@ -606,15 +996,10 @@ function App() {
                 <span className="bg-purple-600 text-white px-4 py-1 rounded-full font-black text-xl">{players.length}</span>
               </div>
               {players.length === 0 ? (
-                <div className="text-center py-12 text-gray-400">
-                  <I.Users size={64} className="mx-auto mb-3 opacity-30" />
-                  <p>İştirakçıları gözləyirik...</p>
-                </div>
+                <div className="text-center py-12 text-gray-400"><I.Users size={64} className="mx-auto mb-3 opacity-30" /><p>İştirakçıları gözləyirik...</p></div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-80 overflow-y-auto">
-                  {players.map(([id, p]) => (
-                    <div key={id} className="bg-gradient-to-br from-purple-100 to-pink-100 text-purple-900 rounded-xl px-3 py-2 font-bold text-center text-sm truncate">{p.name}</div>
-                  ))}
+                  {players.map(([id, p]) => (<div key={id} className="bg-gradient-to-br from-purple-100 to-pink-100 text-purple-900 rounded-xl px-3 py-2 font-bold text-center text-sm truncate animate-fade-in">{p.name}</div>))}
                 </div>
               )}
             </div>
@@ -639,9 +1024,10 @@ function App() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-violet-600 via-purple-700 to-fuchsia-700 p-4 sm:p-8">
         <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-4 text-white">
-            <span className="bg-white/20 backdrop-blur rounded-xl px-4 py-2 font-bold">Sual {game.currentQuestionIndex + 1} / {game.questions.length}</span>
-            <span className="bg-white/20 backdrop-blur rounded-xl px-4 py-2 font-bold flex items-center gap-2"><I.Users size={16} /> {answered} / {total} cavabladı</span>
+          <div className="flex items-center justify-between mb-4 text-white flex-wrap gap-2">
+            <span className="bg-white/20 backdrop-blur rounded-xl px-4 py-2 font-bold text-sm">Sual {game.currentQuestionIndex + 1} / {game.questions.length}</span>
+            <span className="bg-white/20 backdrop-blur rounded-xl px-3 py-2 font-bold text-sm flex items-center gap-1">{QUESTION_TYPES[q.type]?.icon} {QUESTION_TYPES[q.type]?.short}</span>
+            <span className="bg-white/20 backdrop-blur rounded-xl px-4 py-2 font-bold text-sm flex items-center gap-2"><I.Users size={16} /> {answered} / {total}</span>
           </div>
           <div className="bg-white rounded-3xl shadow-2xl p-6 sm:p-10 mb-6">
             <h2 className="text-2xl sm:text-4xl font-black text-gray-900 text-center mb-8 leading-tight">{q.text}</h2>
@@ -652,30 +1038,58 @@ function App() {
               </div>
             </div>
           </div>
-          <div className="grid sm:grid-cols-2 gap-3 mb-6">
-            {q.options.map((opt, i) => (
-              <div key={i} className={`${ANSWER_THEMES[i].bg} text-white rounded-2xl p-5 sm:p-6 shadow-xl flex items-center gap-3`}>
-                <span className="text-3xl sm:text-4xl flex-shrink-0">{ANSWER_THEMES[i].shape}</span>
-                <span className="font-bold text-lg sm:text-xl break-words">{opt}</span>
+
+          {/* Answer display by type */}
+          {(q.type === 'multiple_choice' || q.type === 'multiple_select') && (
+            <div className="grid sm:grid-cols-2 gap-3 mb-6">
+              {q.options.map((opt, i) => (
+                <div key={i} className={`${ANSWER_THEMES[i].bg} text-white rounded-2xl p-5 sm:p-6 shadow-xl flex items-center gap-3`}>
+                  <span className="text-3xl sm:text-4xl flex-shrink-0">{ANSWER_THEMES[i].shape}</span>
+                  <span className="font-bold text-lg sm:text-xl break-words">{opt}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {q.type === 'true_false' && (
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              <div className="bg-emerald-500 text-white rounded-2xl p-8 shadow-xl text-center"><div className="text-6xl mb-2">✓</div><div className="font-black text-3xl">Hə</div></div>
+              <div className="bg-rose-500 text-white rounded-2xl p-8 shadow-xl text-center"><div className="text-6xl mb-2">✗</div><div className="font-black text-3xl">Yox</div></div>
+            </div>
+          )}
+
+          {q.type === 'type_answer' && (
+            <div className="bg-white/20 backdrop-blur rounded-2xl p-8 mb-6 text-center text-white">
+              <I.Edit size={48} className="mx-auto mb-3 opacity-80" />
+              <p className="text-xl font-bold">İştirakçılar cavabı yazırlar...</p>
+            </div>
+          )}
+
+          {q.type === 'sorting' && (
+            <div className="bg-white rounded-2xl p-6 mb-6">
+              <p className="font-bold text-gray-700 mb-3">Düzgün ardıcıllıq:</p>
+              <div className="space-y-2">
+                {q.items.map((item, i) => (
+                  <div key={i} className="flex items-center gap-3 bg-purple-50 rounded-xl p-3">
+                    <div className="w-8 h-8 bg-purple-600 text-white rounded-lg flex items-center justify-center font-black text-sm">{i + 1}</div>
+                    <span className="font-bold text-gray-900">{item}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
+
           <div className="bg-white/20 backdrop-blur rounded-2xl p-4 mb-6">
             <p className="text-white font-bold mb-3">Cavab verənlər:</p>
             <div className="flex flex-wrap gap-2">
               {Object.entries(game.players || {}).map(([pid, p]) => {
                 const a = ansForQ[pid];
-                return (
-                  <div key={pid} className={`px-3 py-1 rounded-lg text-sm font-bold flex items-center gap-1 ${a ? 'bg-emerald-500 text-white' : 'bg-white/40 text-white'}`}>
-                    {p.name} {a && <I.Check size={12} />}
-                  </div>
-                );
+                return (<div key={pid} className={`px-3 py-1 rounded-lg text-sm font-bold flex items-center gap-1 ${a ? 'bg-emerald-500 text-white' : 'bg-white/40 text-white'}`}>{p.name} {a && <I.Check size={12} />}</div>);
               })}
             </div>
           </div>
-          <button onClick={handleShowResults} className="w-full bg-white text-purple-700 font-black text-xl rounded-2xl py-4 shadow-2xl hover:scale-[1.01] transition-transform flex items-center justify-center gap-2">
-            <I.Right size={24} /> Nəticələri göstər
-          </button>
+
+          <button onClick={handleShowResults} className="w-full bg-white text-purple-700 font-black text-xl rounded-2xl py-4 shadow-2xl hover:scale-[1.01] transition-transform flex items-center justify-center gap-2"><I.Right size={24} /> Nəticələri göstər</button>
         </div>
       </div>
     );
@@ -685,16 +1099,16 @@ function App() {
   if (view === 'host-results' && game) {
     const q = game.questions[game.currentQuestionIndex];
     const ansForQ = game.answers?.[game.currentQuestionIndex] || {};
-    const counts = [0, 0, 0, 0];
     let correctCount = 0, wrongCount = 0, noAnswerCount = 0;
     Object.entries(game.players || {}).forEach(([pid]) => {
       const a = ansForQ[pid];
       if (!a) noAnswerCount++;
-      else { counts[a.answer]++; if (a.correct) correctCount++; else wrongCount++; }
+      else if (a.correct) correctCount++;
+      else wrongCount++;
     });
-    const maxCount = Math.max(...counts, 1);
     const leaderboard = getLeaderboard();
     const isLast = game.currentQuestionIndex >= game.questions.length - 1;
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-violet-600 via-purple-700 to-fuchsia-700 p-4 sm:p-8">
         <div className="max-w-5xl mx-auto">
@@ -702,44 +1116,90 @@ function App() {
             <p className="text-sm font-bold opacity-70 mb-1">Sual {game.currentQuestionIndex + 1} nəticələri</p>
             <h2 className="text-2xl sm:text-3xl font-black">{q.text}</h2>
           </div>
+
           <div className="bg-white rounded-3xl shadow-2xl p-6 sm:p-8 mb-6">
             <div className="grid grid-cols-3 gap-3 mb-6">
-              <div className="bg-emerald-50 rounded-2xl p-4 text-center">
-                <I.Check size={32} className="text-emerald-600 mx-auto mb-1" />
-                <div className="text-3xl font-black text-emerald-600">{correctCount}</div>
-                <div className="text-sm text-emerald-700 font-bold">Düzgün</div>
-              </div>
-              <div className="bg-rose-50 rounded-2xl p-4 text-center">
-                <I.X size={32} className="text-rose-600 mx-auto mb-1" />
-                <div className="text-3xl font-black text-rose-600">{wrongCount}</div>
-                <div className="text-sm text-rose-700 font-bold">Səhv</div>
-              </div>
-              <div className="bg-gray-50 rounded-2xl p-4 text-center">
-                <I.Clock size={32} className="text-gray-600 mx-auto mb-1" />
-                <div className="text-3xl font-black text-gray-600">{noAnswerCount}</div>
-                <div className="text-sm text-gray-700 font-bold">Cavabsız</div>
-              </div>
+              <div className="bg-emerald-50 rounded-2xl p-4 text-center"><I.Check size={32} className="text-emerald-600 mx-auto mb-1" /><div className="text-3xl font-black text-emerald-600">{correctCount}</div><div className="text-sm text-emerald-700 font-bold">Düzgün</div></div>
+              <div className="bg-rose-50 rounded-2xl p-4 text-center"><I.X size={32} className="text-rose-600 mx-auto mb-1" /><div className="text-3xl font-black text-rose-600">{wrongCount}</div><div className="text-sm text-rose-700 font-bold">Səhv</div></div>
+              <div className="bg-gray-50 rounded-2xl p-4 text-center"><I.Clock size={32} className="text-gray-600 mx-auto mb-1" /><div className="text-3xl font-black text-gray-600">{noAnswerCount}</div><div className="text-sm text-gray-700 font-bold">Cavabsız</div></div>
             </div>
-            <div className="space-y-2">
-              {q.options.map((opt, i) => {
-                const isCorrect = i === q.correct;
-                const pct = (counts[i] / maxCount) * 100;
-                return (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className={`w-10 h-10 ${ANSWER_THEMES[i].bg} text-white rounded-lg flex items-center justify-center text-xl font-black flex-shrink-0`}>{ANSWER_THEMES[i].shape}</div>
-                    <div className="flex-1 relative h-10 bg-gray-100 rounded-xl overflow-hidden">
-                      <div className={`absolute inset-y-0 left-0 ${ANSWER_THEMES[i].bg} opacity-80 transition-all duration-700`} style={{ width: `${pct}%` }} />
-                      <div className="relative h-full px-3 flex items-center justify-between">
-                        <span className="font-bold text-gray-900 truncate">{opt}</span>
-                        <span className="font-black text-gray-900 ml-2">{counts[i]}</span>
+
+            {/* Type-specific result viz */}
+            {(q.type === 'multiple_choice' || q.type === 'true_false') && (
+              <div className="space-y-2">
+                {q.options.map((opt, i) => {
+                  const count = Object.values(ansForQ).filter(a => a.value === i).length;
+                  const maxCount = Math.max(...q.options.map((_, j) => Object.values(ansForQ).filter(a => a.value === j).length), 1);
+                  const pct = (count / maxCount) * 100;
+                  const isCorrect = i === q.correct;
+                  const theme = q.type === 'true_false' ? (i === 0 ? { bg: 'bg-emerald-500', shape: '✓' } : { bg: 'bg-rose-500', shape: '✗' }) : ANSWER_THEMES[i];
+                  return (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className={`w-10 h-10 ${theme.bg} text-white rounded-lg flex items-center justify-center text-xl font-black flex-shrink-0`}>{theme.shape}</div>
+                      <div className="flex-1 relative h-10 bg-gray-100 rounded-xl overflow-hidden">
+                        <div className={`absolute inset-y-0 left-0 ${theme.bg} opacity-80 transition-all duration-700`} style={{ width: `${pct}%` }} />
+                        <div className="relative h-full px-3 flex items-center justify-between"><span className="font-bold text-gray-900 truncate">{opt}</span><span className="font-black text-gray-900 ml-2">{count}</span></div>
                       </div>
+                      {isCorrect && <div className="w-10 h-10 bg-emerald-500 text-white rounded-full flex items-center justify-center flex-shrink-0"><I.Check size={20} /></div>}
                     </div>
-                    {isCorrect && <div className="w-10 h-10 bg-emerald-500 text-white rounded-full flex items-center justify-center flex-shrink-0"><I.Check size={20} /></div>}
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {q.type === 'multiple_select' && (
+              <div>
+                <p className="font-bold text-gray-700 mb-3">Düzgün cavablar: {q.correctIndices.map(i => q.options[i]).join(', ')}</p>
+                <div className="space-y-2">
+                  {q.options.map((opt, i) => {
+                    const count = Object.values(ansForQ).filter(a => Array.isArray(a.value) && a.value.includes(i)).length;
+                    const totalAnswered = Object.values(ansForQ).length || 1;
+                    const pct = (count / totalAnswered) * 100;
+                    const isCorrect = q.correctIndices?.includes(i);
+                    return (
+                      <div key={i} className="flex items-center gap-3">
+                        <div className={`w-10 h-10 ${ANSWER_THEMES[i].bg} text-white rounded-lg flex items-center justify-center text-xl font-black flex-shrink-0`}>{ANSWER_THEMES[i].shape}</div>
+                        <div className="flex-1 relative h-10 bg-gray-100 rounded-xl overflow-hidden">
+                          <div className={`absolute inset-y-0 left-0 ${ANSWER_THEMES[i].bg} opacity-80`} style={{ width: `${pct}%` }} />
+                          <div className="relative h-full px-3 flex items-center justify-between"><span className="font-bold text-gray-900 truncate">{opt}</span><span className="font-black text-gray-900 ml-2">{count}</span></div>
+                        </div>
+                        {isCorrect && <div className="w-10 h-10 bg-emerald-500 text-white rounded-full flex items-center justify-center flex-shrink-0"><I.Check size={20} /></div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {q.type === 'type_answer' && (
+              <div>
+                <p className="font-bold text-gray-700 mb-2">Düzgün cavablar:</p>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {q.acceptableAnswers.filter(a => a.trim()).map((a, i) => (<span key={i} className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-lg font-bold text-sm">{a}</span>))}
+                </div>
+                <p className="font-bold text-gray-700 mb-2">İştirakçıların cavabları:</p>
+                <div className="space-y-1 max-h-60 overflow-y-auto">
+                  {Object.entries(ansForQ).map(([pid, a]) => (
+                    <div key={pid} className={`flex items-center justify-between p-2 rounded-lg ${a.correct ? 'bg-emerald-50' : 'bg-rose-50'}`}>
+                      <span className="font-bold text-gray-700 text-sm">{game.players[pid]?.name}</span>
+                      <span className={`text-sm ${a.correct ? 'text-emerald-700' : 'text-rose-700'}`}>"{a.value}"</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {q.type === 'sorting' && (
+              <div>
+                <p className="font-bold text-gray-700 mb-3">Düzgün ardıcıllıq:</p>
+                <div className="space-y-2 mb-4">
+                  {q.items.map((item, i) => (<div key={i} className="flex items-center gap-3 bg-emerald-50 rounded-xl p-3"><div className="w-8 h-8 bg-emerald-500 text-white rounded-lg flex items-center justify-center font-black text-sm">{i + 1}</div><span className="font-bold text-gray-900">{item}</span></div>))}
+                </div>
+                <p className="text-sm text-gray-600">Hər iştirakçı düzgün yerlərə görə qismi xal qazandı.</p>
+              </div>
+            )}
           </div>
+
           <div className="bg-white rounded-3xl shadow-2xl p-6 mb-6">
             <h3 className="text-xl font-black text-gray-900 mb-4 flex items-center gap-2"><I.Trophy size={24} className="text-amber-500" /> Lider lövhəsi</h3>
             <div className="space-y-2">
@@ -756,8 +1216,9 @@ function App() {
               })}
             </div>
           </div>
+
           <button onClick={handleNextQuestion} className="w-full bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-black text-xl rounded-2xl py-5 shadow-2xl transition-all hover:scale-[1.01] flex items-center justify-center gap-2">
-            {isLast ? <><I.Trophy size={24} /> Yekun nəticəni göstər</> : <>Növbəti sual <I.Right size={24} /></>}
+            {isLast ? <><I.Trophy size={24} /> Yekun nəticə</> : <>Növbəti sual <I.Right size={24} /></>}
           </button>
         </div>
       </div>
@@ -786,14 +1247,8 @@ function App() {
                 const medals = ['🥈', '🥇', '🥉'];
                 return (
                   <div key={p.id} className="flex flex-col items-center justify-end">
-                    <div className="text-center mb-2">
-                      <div className="text-4xl mb-1">{medals[position]}</div>
-                      <div className="font-black text-white truncate max-w-[120px]">{p.name}</div>
-                      <div className="text-amber-200 font-black text-2xl">{p.score || 0}</div>
-                    </div>
-                    <div className={`w-full bg-gradient-to-b ${colors[position]} rounded-t-2xl flex items-start justify-center pt-3`} style={{ height: heights[position] }}>
-                      <I.Crown size={32} className="text-white" />
-                    </div>
+                    <div className="text-center mb-2"><div className="text-4xl mb-1">{medals[position]}</div><div className="font-black text-white truncate max-w-[120px]">{p.name}</div><div className="text-amber-200 font-black text-2xl">{p.score || 0}</div></div>
+                    <div className={`w-full bg-gradient-to-b ${colors[position]} rounded-t-2xl flex items-start justify-center pt-3`} style={{ height: heights[position] }}><I.Crown size={32} className="text-white" /></div>
                   </div>
                 );
               })}
@@ -813,9 +1268,7 @@ function App() {
               </div>
             </div>
           )}
-          <button onClick={goHome} className="w-full bg-white text-purple-700 font-black text-xl rounded-2xl py-4 shadow-2xl hover:scale-[1.01] transition-transform flex items-center justify-center gap-2">
-            <I.Home size={24} /> Ana səhifəyə qayıt
-          </button>
+          <button onClick={goHome} className="w-full bg-white text-purple-700 font-black text-xl rounded-2xl py-4 shadow-2xl hover:scale-[1.01] transition-transform flex items-center justify-center gap-2"><I.Home size={24} /> Ana səhifəyə qayıt</button>
         </div>
       </div>
     );
@@ -826,19 +1279,16 @@ function App() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-600 via-fuchsia-600 to-purple-700 p-4 flex items-center justify-center">
         <div className="max-w-md w-full">
-          <button onClick={goHome} className="flex items-center gap-2 text-white hover:bg-white/10 px-4 py-2 rounded-xl mb-6 transition-colors"><I.Left size={20} /> Geri</button>
+          <button onClick={goHome} className="flex items-center gap-2 text-white hover:bg-white/10 px-4 py-2 rounded-xl mb-6"><I.Left size={20} /> Geri</button>
           <div className="bg-white rounded-3xl shadow-2xl p-8">
             <div className="w-16 h-16 bg-pink-100 rounded-2xl flex items-center justify-center mb-4"><I.LogIn size={36} className="text-pink-600" /></div>
             <h2 className="text-3xl font-black text-gray-900 mb-2">Oyuna qoşul</h2>
             <p className="text-gray-600 mb-6">Hostdan PIN kodu daxil edin</p>
             <input type="text" value={pinInput} onChange={(e) => setPinInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
               onKeyDown={(e) => e.key === 'Enter' && joinByPin()} placeholder="123456" maxLength={6} inputMode="numeric"
-              className="w-full text-center text-5xl font-black tracking-[0.3em] py-5 border-4 border-gray-200 rounded-2xl focus:border-pink-600 outline-none transition-colors mb-4" />
+              className="w-full text-center text-5xl font-black tracking-[0.3em] py-5 border-4 border-gray-200 rounded-2xl focus:border-pink-600 outline-none mb-4" />
             {error && <div className="bg-red-50 text-red-700 rounded-xl p-3 mb-4 flex items-center gap-2 text-sm"><I.Alert size={16} /> {error}</div>}
-            <button onClick={joinByPin} disabled={pinInput.length !== 6}
-              className="w-full bg-gradient-to-r from-pink-500 to-fuchsia-600 hover:from-pink-600 hover:to-fuchsia-700 disabled:from-gray-300 disabled:to-gray-400 text-white font-black text-lg rounded-2xl py-4 shadow-xl transition-all hover:scale-[1.01]">
-              Davam et
-            </button>
+            <button onClick={joinByPin} disabled={pinInput.length !== 6} className="w-full bg-gradient-to-r from-pink-500 to-fuchsia-600 hover:from-pink-600 hover:to-fuchsia-700 disabled:from-gray-300 disabled:to-gray-400 text-white font-black text-lg rounded-2xl py-4 shadow-xl">Davam et</button>
           </div>
         </div>
       </div>
@@ -856,12 +1306,9 @@ function App() {
             <p className="text-gray-600 mb-6">{game?.title} oyununa xoş gəldin</p>
             <input type="text" value={nameInput} onChange={(e) => setNameInput(e.target.value.slice(0, 24))}
               onKeyDown={(e) => e.key === 'Enter' && submitName()} placeholder="Adını yaz..." maxLength={24} autoFocus
-              className="w-full text-center text-2xl font-bold py-4 border-4 border-gray-200 rounded-2xl focus:border-pink-600 outline-none transition-colors mb-4" />
+              className="w-full text-center text-2xl font-bold py-4 border-4 border-gray-200 rounded-2xl focus:border-pink-600 outline-none mb-4" />
             {error && <div className="bg-red-50 text-red-700 rounded-xl p-3 mb-4 flex items-center gap-2 text-sm"><I.Alert size={16} /> {error}</div>}
-            <button onClick={submitName} disabled={!nameInput.trim()}
-              className="w-full bg-gradient-to-r from-pink-500 to-fuchsia-600 hover:from-pink-600 hover:to-fuchsia-700 disabled:from-gray-300 disabled:to-gray-400 text-white font-black text-lg rounded-2xl py-4 shadow-xl transition-all hover:scale-[1.01]">
-              Oyuna keç
-            </button>
+            <button onClick={submitName} disabled={!nameInput.trim()} className="w-full bg-gradient-to-r from-pink-500 to-fuchsia-600 hover:from-pink-600 hover:to-fuchsia-700 disabled:from-gray-300 disabled:to-gray-400 text-white font-black text-lg rounded-2xl py-4 shadow-xl">Oyuna keç</button>
           </div>
         </div>
       </div>
@@ -877,31 +1324,25 @@ function App() {
           <div className="inline-flex items-center justify-center w-20 h-20 bg-white/20 backdrop-blur rounded-3xl mb-6 animate-pulse"><I.Sparkles size={40} /></div>
           <p className="text-xl mb-2 opacity-90">Salam,</p>
           <h2 className="text-5xl font-black mb-8 break-words">{playerName}!</h2>
-          <div className="bg-white/20 backdrop-blur rounded-2xl p-6 mb-6">
-            <p className="text-base opacity-90 mb-1">Oyun:</p>
-            <p className="text-2xl font-bold mb-4 truncate">{game.title}</p>
-            <div className="flex items-center justify-center gap-2"><I.Users size={20} /><span className="font-bold">{playerCount} iştirakçı qoşulub</span></div>
-          </div>
-          <div className="flex items-center justify-center gap-2 text-lg">
-            <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-            <p>Hostun başlatmasını gözləyirik...</p>
-          </div>
+          <div className="bg-white/20 backdrop-blur rounded-2xl p-6 mb-6"><p className="text-base opacity-90 mb-1">Oyun:</p><p className="text-2xl font-bold mb-4 truncate">{game.title}</p><div className="flex items-center justify-center gap-2"><I.Users size={20} /><span className="font-bold">{playerCount} iştirakçı</span></div></div>
+          <div className="flex items-center justify-center gap-2 text-lg"><div className="w-2 h-2 bg-white rounded-full animate-pulse" /><p>Hostun başlatmasını gözləyirik...</p></div>
         </div>
       </div>
     );
   }
 
-  // ---- PLAYER: PLAYING ----
+  // ---- PLAYER: PLAYING (type-specific UI) ----
   if (view === 'player-playing' && game) {
     const q = game.questions[game.currentQuestionIndex];
     const timeLeft = getTimeLeft();
     const timePct = getTimePercent();
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-600 via-fuchsia-600 to-purple-700 p-4 flex flex-col">
         <div className="max-w-2xl w-full mx-auto flex flex-col flex-1">
-          <div className="flex items-center justify-between text-white mb-4">
+          <div className="flex items-center justify-between text-white mb-3 flex-wrap gap-2">
             <span className="bg-white/20 backdrop-blur rounded-xl px-3 py-1 text-sm font-bold">Sual {game.currentQuestionIndex + 1} / {game.questions.length}</span>
-            <span className="bg-white/20 backdrop-blur rounded-xl px-3 py-1 text-sm font-bold flex items-center gap-1"><I.Timer size={16} /> {timeLeft}s</span>
+            <span className="bg-white/20 backdrop-blur rounded-xl px-3 py-1 text-sm font-bold flex items-center gap-1"><I.Timer size={14} /> {timeLeft}s</span>
           </div>
           <div className="h-2 bg-white/20 rounded-full overflow-hidden mb-4">
             <div className="h-full bg-white transition-all duration-200" style={{ width: `${timePct}%` }} />
@@ -909,15 +1350,109 @@ function App() {
           <div className="bg-white rounded-2xl shadow-xl p-5 mb-4">
             <p className="text-lg sm:text-xl font-bold text-gray-900 text-center">{q.text}</p>
           </div>
-          <div className="grid grid-cols-2 gap-3 flex-1">
-            {q.options.map((opt, i) => (
-              <button key={i} onClick={() => submitAnswer(i)} disabled={answerLocked}
-                className={`${ANSWER_THEMES[i].bg} ${ANSWER_THEMES[i].hover} text-white rounded-2xl p-5 shadow-xl transition-all flex flex-col items-center justify-center gap-2 ${answerLocked ? 'opacity-50' : 'hover:scale-105 active:scale-95'} ${selectedAnswer === i ? 'ring-4 ring-white' : ''}`}>
-                <span className="text-4xl sm:text-5xl">{ANSWER_THEMES[i].shape}</span>
-                <span className="font-bold text-base sm:text-lg break-words text-center">{opt}</span>
+
+          {q.type === 'multiple_choice' && (
+            <div className="grid grid-cols-2 gap-3 flex-1">
+              {q.options.map((opt, i) => (
+                <button key={i} onClick={() => submitAnswerValue(i)} disabled={answerLocked}
+                  className={`${ANSWER_THEMES[i].bg} ${ANSWER_THEMES[i].hover} text-white rounded-2xl p-5 shadow-xl transition-all flex flex-col items-center justify-center gap-2 ${answerLocked ? 'opacity-50' : 'hover:scale-105 active:scale-95'}`}>
+                  <span className="text-4xl">{ANSWER_THEMES[i].shape}</span>
+                  <span className="font-bold text-base sm:text-lg break-words text-center">{opt}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {q.type === 'true_false' && (
+            <div className="grid grid-cols-2 gap-3 flex-1">
+              <button onClick={() => submitAnswerValue(0)} disabled={answerLocked} className={`bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl p-8 shadow-xl flex flex-col items-center justify-center gap-3 ${answerLocked ? 'opacity-50' : 'hover:scale-105 active:scale-95'}`}><span className="text-7xl">✓</span><span className="font-black text-3xl">Hə</span></button>
+              <button onClick={() => submitAnswerValue(1)} disabled={answerLocked} className={`bg-rose-500 hover:bg-rose-600 text-white rounded-2xl p-8 shadow-xl flex flex-col items-center justify-center gap-3 ${answerLocked ? 'opacity-50' : 'hover:scale-105 active:scale-95'}`}><span className="text-7xl">✗</span><span className="font-black text-3xl">Yox</span></button>
+            </div>
+          )}
+
+          {q.type === 'multiple_select' && (
+            <div className="flex flex-col flex-1">
+              <div className="grid grid-cols-2 gap-3 flex-1 mb-3">
+                {q.options.map((opt, i) => {
+                  const selected = multiSelectedAnswers.includes(i);
+                  return (
+                    <button key={i} onClick={() => {
+                      if (answerLocked) return;
+                      setMultiSelectedAnswers(selected ? multiSelectedAnswers.filter(x => x !== i) : [...multiSelectedAnswers, i]);
+                    }} disabled={answerLocked}
+                      className={`${ANSWER_THEMES[i].bg} ${ANSWER_THEMES[i].hover} text-white rounded-2xl p-4 shadow-xl flex flex-col items-center justify-center gap-2 transition-all ${answerLocked ? 'opacity-50' : ''} ${selected ? 'ring-4 ring-white scale-105' : ''}`}>
+                      <span className="text-3xl">{ANSWER_THEMES[i].shape}</span>
+                      <span className="font-bold text-sm break-words text-center">{opt}</span>
+                      {selected && <I.Check size={20} />}
+                    </button>
+                  );
+                })}
+              </div>
+              <button onClick={() => submitAnswerValue([...multiSelectedAnswers].sort())} disabled={answerLocked || multiSelectedAnswers.length === 0}
+                className="bg-white text-purple-700 font-black text-lg rounded-2xl py-4 shadow-2xl disabled:opacity-50">
+                Cavabı təsdiqlə ({multiSelectedAnswers.length} seçildi)
               </button>
-            ))}
-          </div>
+            </div>
+          )}
+
+          {q.type === 'type_answer' && (
+            <div className="flex flex-col flex-1">
+              <div className="bg-white rounded-2xl p-5 shadow-xl mb-3 flex-1">
+                <I.Edit size={32} className="text-purple-500 mb-3" />
+                <input type="text" value={textAnswer} onChange={(e) => setTextAnswer(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && textAnswer.trim() && !answerLocked && submitAnswerValue(textAnswer.trim())}
+                  placeholder="Cavabınızı yazın..." disabled={answerLocked} autoFocus
+                  className="w-full text-2xl font-bold border-b-4 border-purple-200 focus:border-purple-600 outline-none pb-2" />
+              </div>
+              <button onClick={() => submitAnswerValue(textAnswer.trim())} disabled={answerLocked || !textAnswer.trim()}
+                className="bg-white text-purple-700 font-black text-lg rounded-2xl py-4 shadow-2xl disabled:opacity-50">
+                Cavabı göndər
+              </button>
+            </div>
+          )}
+
+          {q.type === 'sorting' && (
+            <div className="flex flex-col flex-1">
+              <div className="bg-white rounded-2xl p-4 shadow-xl mb-3">
+                <p className="text-sm font-bold text-gray-700 mb-2">Sıralama (1-dən {q.items.length}-ə):</p>
+                <div className="space-y-2">
+                  {sortingState.slots.map((slot, idx) => (
+                    <div key={idx} className={`flex items-center gap-2 p-2 rounded-xl border-2 ${slot ? 'bg-purple-100 border-purple-300' : 'bg-gray-50 border-dashed border-gray-300'}`}>
+                      <div className="w-8 h-8 bg-purple-600 text-white rounded-lg flex items-center justify-center font-black text-sm">{idx + 1}</div>
+                      <span className="flex-1 font-bold text-gray-900">{slot ? slot.item : <span className="text-gray-400 italic">boş</span>}</span>
+                      {slot && (
+                        <button onClick={() => {
+                          if (answerLocked) return;
+                          const newSlots = [...sortingState.slots]; newSlots[idx] = null;
+                          setSortingState({ slots: newSlots, pool: [...sortingState.pool, slot] });
+                        }} className="text-rose-600 p-1"><I.X size={16} /></button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {sortingState.pool.length > 0 && (
+                <div className="bg-white/20 backdrop-blur rounded-2xl p-3 mb-3">
+                  <p className="text-white text-sm font-bold mb-2">Aşağıdan seçin:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {sortingState.pool.map((p, i) => (
+                      <button key={i} onClick={() => {
+                        if (answerLocked) return;
+                        const slotIdx = sortingState.slots.findIndex(s => s === null);
+                        if (slotIdx === -1) return;
+                        const newSlots = [...sortingState.slots]; newSlots[slotIdx] = p;
+                        const newPool = sortingState.pool.filter((_, j) => j !== i);
+                        setSortingState({ slots: newSlots, pool: newPool });
+                      }} className="bg-white text-purple-700 font-bold px-4 py-2 rounded-xl shadow-md hover:scale-105 transition-transform">{p.item}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <button onClick={() => submitAnswerValue(sortingState.slots.map(s => s.item))} disabled={answerLocked || sortingState.slots.some(s => s === null)}
+                className="bg-white text-purple-700 font-black text-lg rounded-2xl py-4 shadow-2xl disabled:opacity-50">
+                Sıralamanı təsdiqlə
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -925,11 +1460,10 @@ function App() {
 
   // ---- PLAYER: ANSWERED ----
   if (view === 'player-answered' && game) {
-    const theme = ANSWER_THEMES[selectedAnswer];
     return (
-      <div className={`min-h-screen ${theme.bg} p-6 flex items-center justify-center`}>
+      <div className="min-h-screen bg-gradient-to-br from-purple-600 to-fuchsia-700 p-6 flex items-center justify-center">
         <div className="text-center text-white">
-          <div className="text-8xl mb-6">{theme.shape}</div>
+          <I.Check size={96} className="mx-auto mb-6" />
           <h2 className="text-3xl font-black mb-2">Cavab göndərildi!</h2>
           <p className="text-xl opacity-90">Digərlərinin cavablarını gözləyirik...</p>
           <div className="flex justify-center gap-1 mt-6">
@@ -951,23 +1485,25 @@ function App() {
     const myRank = leaderboard.findIndex(p => p.id === playerId) + 1;
     const isCorrect = a?.correct;
     const noAnswer = !a;
+    const isPartial = a && a.correctness > 0 && a.correctness < 1;
+
     return (
-      <div className={`min-h-screen p-4 flex items-center justify-center ${noAnswer ? 'bg-gray-700' : isCorrect ? 'bg-gradient-to-br from-emerald-500 to-green-600' : 'bg-gradient-to-br from-rose-500 to-red-600'}`}>
+      <div className={`min-h-screen p-4 flex items-center justify-center ${noAnswer ? 'bg-gray-700' : isCorrect ? 'bg-gradient-to-br from-emerald-500 to-green-600' : isPartial ? 'bg-gradient-to-br from-amber-500 to-orange-600' : 'bg-gradient-to-br from-rose-500 to-red-600'}`}>
         <div className="max-w-md w-full text-center text-white">
           <div className="mb-6">
-            {noAnswer ? (<I.Clock size={96} className="mx-auto" />) : isCorrect ? (
+            {noAnswer ? <I.Clock size={96} className="mx-auto" /> : isCorrect ? (
               <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto"><I.Check size={64} className="text-emerald-600" /></div>
+            ) : isPartial ? (
+              <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto"><span className="text-5xl">½</span></div>
             ) : (
               <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center mx-auto"><I.X size={64} className="text-rose-600" /></div>
             )}
           </div>
-          <h2 className="text-5xl font-black mb-2">{noAnswer ? 'Vaxt bitdi!' : isCorrect ? 'Düzgün!' : 'Səhv!'}</h2>
-          {a && a.correct && <p className="text-2xl font-bold opacity-90 mb-6">+{a.points} xal</p>}
+          <h2 className="text-5xl font-black mb-2">{noAnswer ? 'Vaxt bitdi!' : isCorrect ? 'Düzgün!' : isPartial ? 'Qismən düz!' : 'Səhv!'}</h2>
+          {a && a.points > 0 && <p className="text-2xl font-bold opacity-90 mb-6">+{a.points} xal</p>}
           <div className="bg-white/20 backdrop-blur rounded-2xl p-5 mb-3">
-            <p className="text-sm opacity-80 mb-1">Yer</p>
-            <p className="text-4xl font-black mb-2">{myRank}.</p>
-            <p className="text-sm opacity-80 mb-1">Ümumi xal</p>
-            <p className="text-3xl font-black">{me?.score || 0}</p>
+            <p className="text-sm opacity-80 mb-1">Yer</p><p className="text-4xl font-black mb-2">{myRank}.</p>
+            <p className="text-sm opacity-80 mb-1">Ümumi xal</p><p className="text-3xl font-black">{me?.score || 0}</p>
           </div>
           <p className="opacity-80 mt-4">Hostun növbəti suala keçməsini gözləyirik...</p>
         </div>
@@ -990,10 +1526,8 @@ function App() {
             <><I.Trophy size={80} className="text-amber-300 mx-auto mb-4" /><h1 className="text-4xl font-black mb-2">Oyun bitdi!</h1></>
           )}
           <div className="bg-white/20 backdrop-blur rounded-3xl p-6 my-6">
-            <p className="text-lg opacity-90 mb-1">Yerin:</p>
-            <p className="text-7xl font-black mb-3">{myRank}.</p>
-            <p className="text-lg opacity-90 mb-1">Ümumi xal:</p>
-            <p className="text-4xl font-black">{me?.score || 0}</p>
+            <p className="text-lg opacity-90 mb-1">Yerin:</p><p className="text-7xl font-black mb-3">{myRank}.</p>
+            <p className="text-lg opacity-90 mb-1">Ümumi xal:</p><p className="text-4xl font-black">{me?.score || 0}</p>
           </div>
           <button onClick={goHome} className="w-full bg-white text-purple-700 font-black text-lg rounded-2xl py-4 shadow-2xl hover:scale-[1.02] transition-transform">Ana səhifəyə qayıt</button>
         </div>
