@@ -85,7 +85,7 @@ export default function HomeView({ onKahoot, onCrowd }) {
           transition={{ delay: 0.9 }}
           className="text-center text-purple-200 mt-10 text-sm"
         >
-          Quiz · Crowd · Real vaxt · Firebase
+          🧠 Your Knowledge. Your Crowd. Your Game.
         </motion.p>
       </motion.div>
     </div>
