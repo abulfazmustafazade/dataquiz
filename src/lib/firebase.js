@@ -1,14 +1,12 @@
 import { initializeApp } from 'firebase/app';
 import { getDatabase, ref, set, update, get, onValue, off, child, runTransaction } from 'firebase/database';
 
-
+// =====================================================================
+// 🔥 FIREBASE CONFIG — buraya öz config-inizi yazın
+// =====================================================================
 // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyAb9XY6BLmmjX8Xw7YyFmoOJP55FiY45JU",
   authDomain: "quizdata11.firebaseapp.com",
@@ -23,9 +21,11 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
+// =====================================================================
 
 export const FIREBASE_OK = firebaseConfig.apiKey !== "YOUR_API_KEY_HERE";
 
+let app = null;
 let db = null;
 
 if (FIREBASE_OK) {
