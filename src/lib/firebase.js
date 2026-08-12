@@ -24,7 +24,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 
-export const FIREBASE_OK = firebaseConfig.apiKey !== "";
+export const FIREBASE_OK = firebaseConfig.apiKey !== "AIzaSyAb9XY6BLmmjX8Xw7YyFmoOJP55FiY45JU";
 
 let db = null;
 
