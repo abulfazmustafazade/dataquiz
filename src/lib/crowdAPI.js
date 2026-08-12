@@ -30,7 +30,6 @@ export const crowdAPI = {
           ...data,
           createdAt: Date.now(),
           status: 'open',
-          prompt: { type: 'question', text: '', options: [] },
         };
       });
       return result.committed;
