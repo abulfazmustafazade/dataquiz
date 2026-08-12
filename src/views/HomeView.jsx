@@ -21,7 +21,7 @@ export default function HomeView({ onKahoot, onCrowd }) {
             transition={{ delay: 0.2, type: 'spring' }}
             className="text-6xl font-black text-white mb-3 tracking-tight drop-shadow-lg mt-6 gradient-text"
           >
-            QuizLive!
+            BrainRushX!
           </motion.h1>
           <motion.p
             initial={{ opacity: 0 }}
