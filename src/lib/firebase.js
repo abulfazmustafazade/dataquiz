@@ -27,7 +27,7 @@ let db= null;
 
 if (FIREBASE_OK) {
   try {
-    app = initializeApp(firebaseConfig);
+    
     db = getDatabase(app);
   } catch (e) {
     console.error('Firebase init error:', e);
