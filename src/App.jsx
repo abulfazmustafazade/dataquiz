@@ -8,6 +8,10 @@ import { sounds } from './lib/sounds';
 import { useGameState } from './hooks/useGameState';
 import { useQuestionTimer } from './hooks/useQuestionTimer';
 import { useToast } from './hooks/useToast';
+import CrowdLandingView   from './views/crowd/CrowdLandingView.jsx';
+import CrowdHostView      from './views/crowd/CrowdHostView.jsx';
+import CrowdJoinView      from './views/crowd/CrowdJoinView.jsx';
+import CrowdParticipantView from './views/crowd/CrowdParticipantView.jsx';
 
 import Toast from './components/Toast';
 import FirebaseWarning from './components/FirebaseWarning';
@@ -37,6 +41,11 @@ export default function App() {
   const [editingQuiz, setEditingQuiz] = useState(null);
   const [editingQuestion, setEditingQuestion] = useState({ idx: -1, draft: null });
 
+  // Crowd state
+const [crowdPin,  setCrowdPin]  = useState('');
+const [crowdName, setCrowdName] = useState('');
+const [crowdSession, setCrowdSession] = useState(null);
+  
   // Game state
   const [pin, setPin] = useState(null);
   const [isHost, setIsHost] = useState(false);
@@ -67,6 +76,11 @@ export default function App() {
       setPinInput(urlPin);
       setView(VIEWS.PLAYER_JOIN);
     }
+    const crowdPin = params.get('crowdpin');
+if (crowdPin && /^\d{6}$/.test(crowdPin)) {
+  setCrowdPin(crowdPin);
+  setView(VIEWS.CROWD_JOIN);
+}
   }, []);
 
   const refreshLibrary = useCallback(() => setLibrary(quizLib.getAll()), []);
@@ -356,12 +370,13 @@ const handleShowResults = async () => {
     <>
       <Toast {...toast} />
 
-      {view === VIEWS.HOME && (
-        <HomeView
-          onAdmin={() => setView(VIEWS.ADMIN_LIBRARY)}
-          onJoin={() => setView(VIEWS.PLAYER_JOIN)}
-        />
-      )}
+{view === VIEWS.HOME && (
+  <HomeView
+    onAdmin={() => setView(VIEWS.ADMIN_LIBRARY)}
+    onJoin={() => setView(VIEWS.PLAYER_JOIN)}
+    onCrowd={() => setView(VIEWS.CROWD_LANDING)}   // ← bu sətri əlavə et
+  />
+)}
 
       {view === VIEWS.ADMIN_LIBRARY && (
         <AdminLibraryView
@@ -451,6 +466,39 @@ const handleShowResults = async () => {
       {view === VIEWS.PLAYER_FINAL && game && (
         <PlayerFinalView playerId={playerId} playerName={playerName} game={game} onHome={goHome} />
       )}
+{view === VIEWS.CROWD_LANDING && (
+  <CrowdLandingView
+    onBack={goHome}
+    onHost={() => setView(VIEWS.CROWD_HOST)}
+    onJoin={() => setView(VIEWS.CROWD_JOIN)}
+  />
+)}
+
+{view === VIEWS.CROWD_HOST && (
+  <CrowdHostView onHome={goHome} />
+)}
+
+{view === VIEWS.CROWD_JOIN && (
+  <CrowdJoinView
+    initialPin={crowdPin}
+    onBack={() => setView(VIEWS.CROWD_LANDING)}
+    onJoined={({ pin, name, session }) => {
+      setCrowdPin(pin);
+      setCrowdName(name);
+      setCrowdSession(session);
+      setView(VIEWS.CROWD_PARTICIPANT);
+    }}
+  />
+)}
+
+{view === VIEWS.CROWD_PARTICIPANT && (
+  <CrowdParticipantView
+    pin={crowdPin}
+    participantName={crowdName}
+    onHome={goHome}
+  />
+)}
+      
     </>
   );
 }
