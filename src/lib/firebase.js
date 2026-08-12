@@ -5,7 +5,6 @@ import { getDatabase, ref, set, update, get, onValue, off, child, runTransaction
 // 🔥 FIREBASE CONFIG — buraya öz config-inizi yazın
 // =====================================================================
 // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
 const firebaseConfig = {
   apiKey: "AIzaSyAb9XY6BLmmjX8Xw7YyFmoOJP55FiY45JU",
@@ -24,9 +23,6 @@ const analytics = getAnalytics(app);
 // =====================================================================
 
 export const FIREBASE_OK = firebaseConfig.apiKey !== "YOUR_API_KEY_HERE";
-
-let app = null;
-let db = null;
 
 if (FIREBASE_OK) {
   try {
