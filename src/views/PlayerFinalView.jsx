@@ -8,33 +8,31 @@ import { fireWinnerConfetti, fireConfetti } from '../lib/confetti';
 import { sounds } from '../lib/sounds';
 
 export default function PlayerFinalView({ playerId, playerName, game, onHome }) {
+  // Sort by score DESC — same as HostFinalView, single source of truth
   const leaderboard = Object.entries(game?.players || {})
     .map(([id, p]) => ({ id, ...p }))
     .sort((a, b) => (b.score || 0) - (a.score || 0));
 
-  const myRank = leaderboard.findIndex(p => p.id === playerId) + 1;
+  const myRank  = leaderboard.findIndex(p => p.id === playerId) + 1;
   const myScore = game?.players?.[playerId]?.score || 0;
-  const total = leaderboard.length;
-  const isWinner = myRank === 1;
-  const isTop3 = myRank <= 3;
+  const total   = leaderboard.length;
 
-  let title, subtitle, themeColor;
-  if (isWinner) {
-    title = '🏆 Qələbə!';
-    subtitle = 'Sən qalibsən!';
-    themeColor = 'from-amber-400 via-yellow-500 to-orange-500';
+  const isWinner = myRank === 1;
+  const isTop3   = myRank <= 3;
+
+  let title, subtitle, themeColor, bgVariant;
+  if (myRank === 1) {
+    title = '🏆 Qələbə!'; subtitle = 'Sən qalibsən!';
+    themeColor = 'from-amber-400 via-yellow-500 to-orange-500'; bgVariant = 'amber';
   } else if (myRank === 2) {
-    title = '🥈 İkinci yer!';
-    subtitle = 'Çox yaxşı!';
-    themeColor = 'from-slate-400 via-gray-500 to-zinc-600';
+    title = '🥈 İkinci yer!'; subtitle = 'Çox yaxşı!';
+    themeColor = 'from-slate-500 via-gray-500 to-zinc-600'; bgVariant = 'rose';
   } else if (myRank === 3) {
-    title = '🥉 Üçüncü yer!';
-    subtitle = 'Əla nəticə!';
-    themeColor = 'from-orange-400 via-amber-600 to-yellow-700';
+    title = '🥉 Üçüncü yer!'; subtitle = 'Əla nəticə!';
+    themeColor = 'from-orange-500 via-amber-600 to-yellow-700'; bgVariant = 'amber';
   } else {
-    title = 'Oyun bitdi!';
-    subtitle = 'İştirakına görə təşəkkürlər';
-    themeColor = 'from-pink-600 via-fuchsia-600 to-purple-700';
+    title = 'Oyun bitdi!'; subtitle = 'İştirakına görə təşəkkürlər';
+    themeColor = 'from-pink-600 via-fuchsia-600 to-purple-700'; bgVariant = 'pink';
   }
 
   useEffect(() => {
@@ -45,12 +43,13 @@ export default function PlayerFinalView({ playerId, playerName, game, onHome }) 
     } else if (isTop3) {
       fireConfetti();
     }
-  }, [isWinner, isTop3]);
+  }, []);
 
   return (
     <div className={`min-h-screen bg-gradient-to-br ${themeColor} p-4 flex items-center justify-center relative overflow-hidden`}>
-      <AnimatedBackground variant={isWinner ? 'amber' : isTop3 ? 'rose' : 'pink'} />
+      <AnimatedBackground variant={bgVariant} />
       <div className="max-w-md w-full text-center text-white relative z-10">
+
         <motion.div
           initial={{ scale: 0, rotate: -180 }}
           animate={{ scale: 1, rotate: 0 }}
@@ -73,7 +72,7 @@ export default function PlayerFinalView({ playerId, playerName, game, onHome }) 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="text-5xl font-black mb-2 gradient-text"
+          className="text-5xl font-black mb-2"
         >
           {title}
         </motion.h2>
@@ -87,7 +86,6 @@ export default function PlayerFinalView({ playerId, playerName, game, onHome }) 
           {subtitle}
         </motion.p>
 
-        {/* Avatar + name */}
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -98,28 +96,25 @@ export default function PlayerFinalView({ playerId, playerName, game, onHome }) 
           <p className="text-2xl font-black mt-2">{playerName}</p>
         </motion.div>
 
-        {/* Stats */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8 }}
-          className="bg-white/20 backdrop-blur rounded-3xl p-6 mb-6"
+          className="bg-white/20 backdrop-blur rounded-3xl p-6 mb-6 grid grid-cols-2 gap-4"
         >
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <div className="text-sm opacity-80 mb-1">Nəticə</div>
-              <div className="text-5xl font-black">
-                #<AnimatedNumber value={myRank} duration={1.5} />
-              </div>
-              <div className="text-xs opacity-70 mt-1">{total} iştirakçıdan</div>
+          <div>
+            <div className="text-sm opacity-80 mb-1">Yerin</div>
+            <div className="text-5xl font-black">
+              #<AnimatedNumber value={myRank} duration={1.5} />
             </div>
-            <div>
-              <div className="text-sm opacity-80 mb-1">Cəmi xal</div>
-              <div className="text-5xl font-black">
-                <AnimatedNumber value={myScore} duration={1.8} />
-              </div>
-              <div className="text-xs opacity-70 mt-1">xal</div>
+            <div className="text-xs opacity-70 mt-1">{total} iştirakçıdan</div>
+          </div>
+          <div>
+            <div className="text-sm opacity-80 mb-1">Cəmi xal</div>
+            <div className="text-5xl font-black">
+              <AnimatedNumber value={myScore} duration={1.8} />
             </div>
+            <div className="text-xs opacity-70 mt-1">xal</div>
           </div>
         </motion.div>
 
