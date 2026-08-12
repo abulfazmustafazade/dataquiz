@@ -233,38 +233,52 @@ export default function App() {
 
   // CRITICAL: Host computes scoring with scoreAnswer() and writes results back.
   // Players read these same results — guaranteeing identical view.
-  const handleShowResults = async () => {
-    if (!game || !pin) return;
-    const qIdx = game.currentQuestionIndex;
-    const q = game.questions[qIdx];
-    const ansForQ = game.answers?.[qIdx] || {};
-    const startedAt = game.questionStartedAt;
+const handleShowResults = async () => {
+  if (!pin) return;
 
-    const updates = {};
-    const newPlayers = { ...(game.players || {}) };
+  // ⚠️ CRITICAL FIX: React state (game) stale ola bilər.
+  // Firebase-dən TƏZƏ data oxuyuruq ki, xallar sıfır görünməsin.
+  const freshGame = await gameAPI.get(pin);
+  if (!freshGame) return;
 
-    for (const [pid] of Object.entries(game.players || {})) {
-      const a = ansForQ[pid];
-      if (!a) continue; // no answer
-      // Recompute and persist canonical result
-      const result = scoreAnswer(q, a, a.answeredAt || (startedAt + totalSeconds(q) * 1000), startedAt);
-      updates[`answers/${qIdx}/${pid}/correct`] = result.correct;
-      updates[`answers/${qIdx}/${pid}/points`] = result.points;
-      updates[`answers/${qIdx}/${pid}/correctness`] = result.correctness;
-      updates[`answers/${qIdx}/${pid}/details`] = result.details || {};
-      // Add points to player's score
-      newPlayers[pid] = {
-        ...newPlayers[pid],
-        score: (newPlayers[pid].score || 0) + result.points,
-      };
-    }
+  const qIdx = freshGame.currentQuestionIndex;
+  const q = freshGame.questions[qIdx];
+  const ansForQ = freshGame.answers?.[qIdx] || {};
+  const startedAt = freshGame.questionStartedAt;
 
-    updates['players'] = newPlayers;
-    updates['status'] = GAME_STATUS.SHOWING_RESULTS;
+  const updates = {};
+  const newPlayers = { ...(freshGame.players || {}) };
 
-    await gameAPI.update(pin, updates);
-    setView(VIEWS.HOST_RESULTS);
-  };
+  for (const [pid] of Object.entries(freshGame.players || {})) {
+    const a = ansForQ[pid];
+    if (!a) continue;
+
+    const result = scoreAnswer(
+      q,
+      a,
+      a.answeredAt || (startedAt + totalSeconds(q) * 1000),
+      startedAt
+    );
+
+    // Write canonical result back to Firebase (player reads this — no discrepancy)
+    updates[`answers/${qIdx}/${pid}/correct`]      = result.correct;
+    updates[`answers/${qIdx}/${pid}/points`]        = result.points;
+    updates[`answers/${qIdx}/${pid}/correctness`]   = result.correctness;
+    updates[`answers/${qIdx}/${pid}/details`]       = result.details || {};
+
+    // Accumulate score
+    newPlayers[pid] = {
+      ...newPlayers[pid],
+      score: (newPlayers[pid].score || 0) + result.points,
+    };
+  }
+
+  updates['players'] = newPlayers;
+  updates['status']  = GAME_STATUS.SHOWING_RESULTS;
+
+  await gameAPI.update(pin, updates);
+  setView(VIEWS.HOST_RESULTS);
+};
 
   const handleNextQuestion = async () => {
     if (!game || !pin) return;
