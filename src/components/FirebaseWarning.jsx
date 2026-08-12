@@ -20,7 +20,7 @@ export default function FirebaseWarning() {
           <li><a href="https://console.firebase.google.com" target="_blank" rel="noreferrer" className="text-purple-600 font-bold hover:underline">Firebase Console</a>-a daxil olun və yeni layihə yaradın</li>
           <li>Sol menyudan <b>Realtime Database</b> → <b>Create Database</b> → <b>Test mode</b></li>
           <li>Project Settings → Web app əlavə edin və <code className="bg-gray-100 px-2 py-1 rounded">firebaseConfig</code>-i kopyalayın</li>
-          <li><code className="bg-gray-100 px-2 py-1 rounded">src/lib/firebase.js</code> faylında config-i əvəz edin</li>
+          <li>Layihə kökündə <code className="bg-gray-100 px-2 py-1 rounded">.env.example</code> faylını <code className="bg-gray-100 px-2 py-1 rounded">.env</code> adı ilə kopyalayıb dəyərləri doldurun</li>
         </ol>
         <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-4 text-sm text-purple-900">
           <b>Tam təlimat:</b> README.md faylına baxın

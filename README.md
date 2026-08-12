@@ -80,24 +80,31 @@ npm install
 
 ### 2. Firebase config qoy
 
-`src/lib/firebase.js` faylını aç və `firebaseConfig` obyektini öz Firebase layihənin dəyərləri ilə əvəz et:
+Açarlar artıq kodda deyil, `.env` faylındadır (git-ə commit olunmur). `.env.example`-i kopyala:
 
-```js
-const firebaseConfig = {
-  apiKey: "...",
-  authDomain: "...",
-  databaseURL: "https://...firebaseio.com", // ⚠️ MÜTLƏQ!
-  projectId: "...",
-  storageBucket: "...",
-  messagingSenderId: "...",
-  appId: "...",
-};
+```bash
+cp .env.example .env
+```
+
+Sonra `.env` faylını aç və öz Firebase layihənin dəyərləri ilə doldur:
+
+```
+VITE_FIREBASE_API_KEY=...
+VITE_FIREBASE_AUTH_DOMAIN=...
+VITE_FIREBASE_DATABASE_URL=https://...firebasedatabase.app   # ⚠️ MÜTLƏQ!
+VITE_FIREBASE_PROJECT_ID=...
+VITE_FIREBASE_STORAGE_BUCKET=...
+VITE_FIREBASE_MESSAGING_SENDER_ID=...
+VITE_FIREBASE_APP_ID=...
+VITE_FIREBASE_MEASUREMENT_ID=...   # optional — Analytics
 ```
 
 Firebase config harada əldə etmək olar:
 1. [Firebase Console](https://console.firebase.google.com) → yeni layihə yarat
 2. **Build → Realtime Database** → Create Database → Test mode
 3. Layihə əsas səhifəsində **`</>`** ikonu → web app qeydiyyatı → config-i kopyala
+
+⚠️ **Vacib**: `.env` yalnız lokal build zamanı oxunur (Vite compile vaxtı dəyərləri bundle-a yazır). GitHub Pages statik hosting olduğu üçün, `npm run deploy`-u işə salmazdan əvvəl `.env` faylının **öz kompüterində** mövcud olması kifayətdir — bu faylı GitHub-a push etmə, o `.gitignore`-dadır.
 
 ### 3. Lokal sınaq
 

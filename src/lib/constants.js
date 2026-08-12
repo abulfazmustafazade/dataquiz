@@ -45,6 +45,7 @@ export const GAME_STATUS = {
 // View names
 export const VIEWS = {
   HOME: 'home',
+  KAHOOT_LANDING: 'kahoot-landing',
   ADMIN_LIBRARY: 'admin-library',
   ADMIN_QUIZ_EDIT: 'admin-quiz-edit',
   ADMIN_QUESTION_EDIT: 'admin-question-edit',

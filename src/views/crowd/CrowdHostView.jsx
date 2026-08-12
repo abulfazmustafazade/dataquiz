@@ -4,7 +4,7 @@ import { Home, Star, Check, Trash2, Eye, EyeOff, Settings, ChevronUp, ChevronDow
 import AnimatedBackground from '../../components/AnimatedBackground';
 import AnimatedNumber from '../../components/AnimatedNumber';
 import { crowdAPI } from '../../lib/crowdAPI';
-import { genPin } from '../../lib/utils';
+import { createWithUniquePin } from '../../lib/utils';
 import { sounds } from '../../lib/sounds';
 
 const TYPE_LABELS = { question: '❓ Sual / Q&A', idea: '💡 Fikir / Brainstorm', poll: '📊 Sorğu / Poll' };
@@ -42,14 +42,13 @@ export default function CrowdHostView({ onHome }) {
     if (!promptText.trim()) { setError('Mövzu/sual lazımdır'); return; }
     if (promptType === 'poll' && pollOptions.filter(o => o.trim()).length < 2) { setError('Ən azı 2 variant lazımdır'); return; }
     setCreating(true);
-    const newPin = genPin();
-    const ok = await crowdAPI.create(newPin, {
+    const newPin = await createWithUniquePin(crowdAPI.create, {
       title: title.trim(),
       settings,
       prompt: { type: promptType, text: promptText.trim(), options: pollOptions.filter(o => o.trim()) },
       participants: 0,
     });
-    if (!ok) { setError('Firebase xətası — config-i yoxla'); setCreating(false); return; }
+    if (!newPin) { setError('Firebase xətası — config-i yoxla'); setCreating(false); return; }
     setPin(newPin);
     setPhase('live');
     sounds.questionStart();

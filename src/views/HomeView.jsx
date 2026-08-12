@@ -1,9 +1,9 @@
 import { motion } from 'framer-motion';
-import { Shield, Smartphone, Radio, ArrowRight } from 'lucide-react';
+import { Zap, Radio, ArrowRight } from 'lucide-react';
 import BrandLogo from '../components/BrandLogo';
 import AnimatedBackground from '../components/AnimatedBackground';
 
-export default function HomeView({ onAdmin, onJoin, onCrowd }) {
+export default function HomeView({ onKahoot, onCrowd }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-violet-600 via-purple-700 to-fuchsia-700 flex items-center justify-center p-4 relative overflow-hidden">
       <AnimatedBackground variant="purple" />
@@ -33,52 +33,30 @@ export default function HomeView({ onAdmin, onJoin, onCrowd }) {
           </motion.p>
         </div>
 
-        <div className="grid sm:grid-cols-3 gap-5">
-          {/* Admin */}
+        <div className="grid sm:grid-cols-2 gap-5">
+          {/* Kahoot */}
           <motion.button
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
             whileHover={{ y: -8, scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={onAdmin}
+            onClick={onKahoot}
             className="group bg-white rounded-3xl p-7 shadow-2xl hover:shadow-purple-500/50 text-left transition-shadow"
           >
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center group-hover:bg-purple-600 transition-colors">
-                <Shield size={28} className="text-purple-600 group-hover:text-white transition-colors" />
+                <Zap size={28} className="text-purple-600 group-hover:text-white transition-colors" />
               </div>
-              <h2 className="text-xl font-black text-gray-900">Admin</h2>
+              <h2 className="text-xl font-black text-gray-900">Kahoot</h2>
             </div>
-            <p className="text-gray-500 text-sm mb-4">Quiz kitabxanasını idarə et, oyunu başlat.</p>
+            <p className="text-gray-500 text-sm mb-4">Quiz yarat və ya PIN ilə canlı yarışa qoşul.</p>
             <div className="flex items-center gap-1 text-purple-600 font-bold text-sm">
-              Quiz kitabxanası <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+              Admin · İştirakçı <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
             </div>
           </motion.button>
 
-          {/* Player */}
-          <motion.button
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            whileHover={{ y: -8, scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={onJoin}
-            className="group bg-white rounded-3xl p-7 shadow-2xl hover:shadow-pink-500/50 text-left transition-shadow"
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-pink-100 rounded-2xl flex items-center justify-center group-hover:bg-pink-600 transition-colors">
-                <Smartphone size={28} className="text-pink-600 group-hover:text-white transition-colors" />
-              </div>
-              <h2 className="text-xl font-black text-gray-900">İştirakçı</h2>
-            </div>
-            <p className="text-gray-500 text-sm mb-4">PIN kod ilə oyuna qoşul, sualları cavablandır.</p>
-            <div className="flex items-center gap-1 text-pink-600 font-bold text-sm">
-              Oyuna qoşul <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-            </div>
-          </motion.button>
-
-          {/* Crowd — NEW */}
+          {/* Crowd */}
           <motion.button
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

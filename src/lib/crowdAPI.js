@@ -1,7 +1,7 @@
 import { getApp } from 'firebase/app';
 import {
   getDatabase, ref, set, update, get,
-  push, onValue, off, increment
+  push, onValue, off, increment, runTransaction
 } from 'firebase/database';
 
 // Import firebase.js to ensure the app is initialized before we use it
@@ -20,16 +20,20 @@ const getDb = () => {
 
 export const crowdAPI = {
 
+  // Transaction-based — fails instead of overwriting if the PIN is already in use
   create: async (pin, data) => {
     const db = getDb(); if (!db) return false;
     try {
-      await set(ref(db, `crowd/${pin}`), {
-        ...data,
-        createdAt: Date.now(),
-        status: 'open',
-        prompt: { type: 'question', text: '', options: [] },
+      const result = await runTransaction(ref(db, `crowd/${pin}`), (current) => {
+        if (current !== null) return; // abort — PIN already taken
+        return {
+          ...data,
+          createdAt: Date.now(),
+          status: 'open',
+          prompt: { type: 'question', text: '', options: [] },
+        };
       });
-      return true;
+      return result.committed;
     } catch (e) { console.error(e); return false; }
   },
 
@@ -44,6 +48,13 @@ export const crowdAPI = {
   update: async (pin, updates) => {
     const db = getDb(); if (!db) return;
     try { await update(ref(db, `crowd/${pin}`), updates); }
+    catch (e) { console.error(e); }
+  },
+
+  // Atomic — avoids lost updates when multiple participants join at once
+  incrementParticipants: async (pin) => {
+    const db = getDb(); if (!db) return;
+    try { await update(ref(db, `crowd/${pin}`), { participants: increment(1) }); }
     catch (e) { console.error(e); }
   },
 

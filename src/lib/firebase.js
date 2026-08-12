@@ -1,37 +1,44 @@
 import { initializeApp } from 'firebase/app';
 import { getDatabase, ref, set, update, get, onValue, off, child, runTransaction } from 'firebase/database';
+import { GAME_STATUS } from './constants';
 
 // =====================================================================
-// 🔥 FIREBASE CONFIG — buraya öz config-inizi yazın
+// 🔥 FIREBASE CONFIG — dəyərlər .env faylından oxunur (bax: .env.example)
+// Bu sayədə əsl açarlar heç vaxt git-ə commit olunmur.
 // =====================================================================
-// Import the functions you need from the SDKs you need
-import { getAnalytics } from "firebase/analytics";
 const firebaseConfig = {
-  apiKey: "AIzaSyAb9XY6BLmmjX8Xw7YyFmoOJP55FiY45JU",
-  authDomain: "quizdata11.firebaseapp.com",
-  databaseURL: "https://quizdata11-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "quizdata11",
-  storageBucket: "quizdata11.firebasestorage.app",
-  messagingSenderId: "104656597775",
-  appId: "1:104656597775:web:1c2b027e8a00aa2f1bc47a",
-  measurementId: "G-17FVBBCZ7X"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-// =====================================================================
+export const FIREBASE_OK = Boolean(firebaseConfig.apiKey && firebaseConfig.databaseURL);
 
-export const FIREBASE_OK = firebaseConfig.apiKey !== "YOUR_API_KEY_HERE";
-let db= null;
+let db = null;
 
 if (FIREBASE_OK) {
   try {
-    
+    const app = initializeApp(firebaseConfig);
     db = getDatabase(app);
+
+    // Analytics is optional and unsupported in some environments (SSR, older
+    // browsers) — never let it break the app if it fails to load.
+    if (firebaseConfig.measurementId) {
+      import('firebase/analytics')
+        .then(({ isSupported, getAnalytics }) => isSupported().then((ok) => ok && getAnalytics(app)))
+        .catch((e) => console.warn('Firebase Analytics disabled:', e));
+    }
   } catch (e) {
     console.error('Firebase init error:', e);
+    db = null;
   }
+} else {
+  console.error('Firebase config missing — .env faylını yoxlayın (bax: .env.example)');
 }
 
 // =====================================================================
@@ -50,14 +57,30 @@ export const gameAPI = {
     }
   },
 
-  // Create/replace full game (only used for game creation)
-  set: async (pin, data) => {
+  // Create a NEW game at this PIN — fails (does not overwrite) if the PIN is
+  // already in use, so two hosts can never collide on the same code.
+  create: async (pin, data) => {
     if (!db) return false;
     try {
-      await set(ref(db, `games/${pin}`), data);
+      const result = await runTransaction(ref(db, `games/${pin}`), (current) => {
+        if (current !== null) return; // abort — PIN already taken
+        return data;
+      });
+      return result.committed;
+    } catch (e) {
+      console.error('gameAPI.create error:', e);
+      return false;
+    }
+  },
+
+  // Permanently delete a game (used to clean up after it's finished)
+  remove: async (pin) => {
+    if (!db) return false;
+    try {
+      await set(ref(db, `games/${pin}`), null);
       return true;
     } catch (e) {
-      console.error('gameAPI.set error:', e);
+      console.error('gameAPI.remove error:', e);
       return false;
     }
   },
@@ -74,15 +97,40 @@ export const gameAPI = {
     }
   },
 
-  // Add a player atomically (no overwriting other players)
-  addPlayer: async (pin, playerId, playerData) => {
-    if (!db) return false;
+  // Add a player only if their name isn't already taken — atomic check-and-set
+  // so two players joining at the same instant can't both grab the same name.
+  addPlayerIfNameFree: async (pin, playerId, playerData) => {
+    if (!db) return { ok: false };
     try {
-      await set(ref(db, `games/${pin}/players/${playerId}`), playerData);
-      return true;
+      const nameLower = (playerData.name || '').toLowerCase();
+      const result = await runTransaction(ref(db, `games/${pin}/players`), (current) => {
+        const players = current || {};
+        const taken = Object.values(players).some(p => (p?.name || '').toLowerCase() === nameLower);
+        if (taken) return; // abort — name already in use
+        return { ...players, [playerId]: playerData };
+      });
+      return { ok: result.committed, reason: result.committed ? null : 'name-taken' };
     } catch (e) {
-      console.error('addPlayer error:', e);
-      return false;
+      console.error('addPlayerIfNameFree error:', e);
+      return { ok: false, reason: 'error' };
+    }
+  },
+
+  // Atomically move a game from PLAYING -> SHOWING_RESULTS. Returns ok:false
+  // if someone else already made this transition (guards against the manual
+  // "show results" button and the auto-timer both firing at once, which would
+  // otherwise double-award points).
+  beginShowResults: async (pin) => {
+    if (!db) return { ok: false };
+    try {
+      const result = await runTransaction(ref(db, `games/${pin}/status`), (current) => {
+        if (current !== GAME_STATUS.PLAYING) return; // abort — already transitioning
+        return GAME_STATUS.SHOWING_RESULTS;
+      });
+      return { ok: result.committed };
+    } catch (e) {
+      console.error('beginShowResults error:', e);
+      return { ok: false };
     }
   },
 

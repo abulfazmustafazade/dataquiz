@@ -27,8 +27,8 @@ export default function CrowdJoinView({ initialPin = '', onBack, onJoined }) {
   const handleName = async () => {
     const name = nameInput.trim();
     if (!name) { setError('Ad boş ola bilməz'); return; }
-    // Increment participant count
-    await crowdAPI.update(pinInput, { participants: (session.participants || 0) + 1 });
+    // Atomic increment — safe under concurrent joins
+    await crowdAPI.incrementParticipants(pinInput);
     onJoined({ pin: pinInput, name, session });
   };
 

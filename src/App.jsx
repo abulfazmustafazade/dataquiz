@@ -1,10 +1,11 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { VIEWS, GAME_STATUS } from './lib/constants';
-import { genPin, genId, totalSeconds } from './lib/utils';
+import { genId, totalSeconds, createWithUniquePin } from './lib/utils';
 import { quizLib } from './lib/storage';
 import { gameAPI, FIREBASE_OK } from './lib/firebase';
 import { scoreAnswer, createQuestion } from './lib/scoring';
 import { sounds } from './lib/sounds';
+import { gameSession } from './lib/session';
 import { useGameState } from './hooks/useGameState';
 import { useQuestionTimer } from './hooks/useQuestionTimer';
 import { useToast } from './hooks/useToast';
@@ -17,6 +18,7 @@ import Toast from './components/Toast';
 import FirebaseWarning from './components/FirebaseWarning';
 
 import HomeView from './views/HomeView';
+import KahootLandingView from './views/KahootLandingView';
 import AdminLibraryView from './views/AdminLibraryView';
 import AdminQuizEditView from './views/AdminQuizEditView';
 import AdminQuestionEditView from './views/AdminQuestionEditView';
@@ -67,25 +69,59 @@ const [crowdSession, setCrowdSession] = useState(null);
   const { toast, show: showToast } = useToast();
 
   // -------------------------------------------------------------------
-  // URL ?pin=XXX auto-fill
+  // On load: try to reconnect a saved host/player session (survives page
+  // refresh), otherwise fall back to URL ?pin=XXX / ?crowdpin=XXX auto-fill.
   // -------------------------------------------------------------------
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const urlPin = params.get('pin');
-    if (urlPin && /^\d{6}$/.test(urlPin)) {
-      setPinInput(urlPin);
-      setView(VIEWS.PLAYER_JOIN);
-    }
-    const crowdPin = params.get('crowdpin');
-if (crowdPin && /^\d{6}$/.test(crowdPin)) {
-  setCrowdPin(crowdPin);
-  setView(VIEWS.CROWD_JOIN);
-}
+    const urlCrowdPin = params.get('crowdpin');
+
+    (async () => {
+      const saved = gameSession.load();
+      if (saved?.pin) {
+        const g = await gameAPI.get(saved.pin);
+        if (g && saved.role === 'host') {
+          setPin(saved.pin);
+          setIsHost(true);
+          return;
+        }
+        if (g && saved.role === 'player' && g.players?.[saved.playerId]) {
+          // Restore "already answered" tracking so a refresh can't be used
+          // to re-answer a question that was already submitted.
+          const qIdx = g.currentQuestionIndex;
+          if (g.status === GAME_STATUS.PLAYING && g.answers?.[qIdx]?.[saved.playerId]) {
+            playerAnsweredRef.current = qIdx;
+          }
+          setPin(saved.pin);
+          setIsHost(false);
+          setPlayerId(saved.playerId);
+          setPlayerName(g.players[saved.playerId].name);
+          return;
+        }
+        // Saved session no longer valid (game ended/deleted) — drop it.
+        gameSession.clear();
+      }
+
+      if (urlPin && /^\d{6}$/.test(urlPin)) {
+        setPinInput(urlPin);
+        setView(VIEWS.PLAYER_JOIN);
+      }
+      if (urlCrowdPin && /^\d{6}$/.test(urlCrowdPin)) {
+        setCrowdPin(urlCrowdPin);
+        setView(VIEWS.CROWD_JOIN);
+      }
+    })();
   }, []);
 
   const refreshLibrary = useCallback(() => setLibrary(quizLib.getAll()), []);
 
   const goHome = useCallback(() => {
+    // Clean finished games out of Firebase so they don't pile up forever.
+    if (isHost && pin && game?.status === GAME_STATUS.FINISHED) {
+      gameAPI.remove(pin);
+    }
+    gameSession.clear();
     setView(VIEWS.HOME);
     setPin(null);
     setIsHost(false);
@@ -102,7 +138,7 @@ if (crowdPin && /^\d{6}$/.test(crowdPin)) {
       window.history.replaceState({}, '', window.location.pathname);
     }
     refreshLibrary();
-  }, [refreshLibrary]);
+  }, [refreshLibrary, isHost, pin, game?.status]);
 
   // -------------------------------------------------------------------
   // PLAYER auto-transitions based on Firebase game state
@@ -129,6 +165,18 @@ if (crowdPin && /^\d{6}$/.test(crowdPin)) {
       setView(VIEWS.PLAYER_LOBBY);
     }
   }, [game?.status, game?.currentQuestionIndex, isHost, playerId]);
+
+  // -------------------------------------------------------------------
+  // HOST auto-transition based on Firebase game state (mainly so a
+  // reconnect after refresh lands on the right screen automatically)
+  // -------------------------------------------------------------------
+  useEffect(() => {
+    if (!isHost || !game || !pin) return;
+    if (game.status === GAME_STATUS.LOBBY) setView(VIEWS.HOST_LOBBY);
+    else if (game.status === GAME_STATUS.PLAYING) setView(VIEWS.HOST_QUESTION);
+    else if (game.status === GAME_STATUS.SHOWING_RESULTS) setView(VIEWS.HOST_RESULTS);
+    else if (game.status === GAME_STATUS.FINISHED) setView(VIEWS.HOST_FINAL);
+  }, [game?.status, isHost, pin]);
 
   // -------------------------------------------------------------------
   // HOST auto-end question when timer expires
@@ -208,9 +256,7 @@ if (crowdPin && /^\d{6}$/.test(crowdPin)) {
       showToast('Quizdə sual yoxdur', 'error');
       return;
     }
-    const newPin = genPin();
     const gameData = {
-      pin: newPin,
       title: quiz.title,
       questions: quiz.questions,
       players: {},
@@ -220,13 +266,19 @@ if (crowdPin && /^\d{6}$/.test(crowdPin)) {
       questionStartedAt: null,
       createdAt: Date.now(),
     };
-    const ok = await gameAPI.set(newPin, gameData);
-    if (!ok) {
+    // createWithUniquePin retries with a fresh PIN if one happens to already
+    // be in use, instead of silently overwriting another host's game.
+    const newPin = await createWithUniquePin(
+      (pin, data) => gameAPI.create(pin, { ...data, pin }),
+      gameData
+    );
+    if (!newPin) {
       showToast('Firebase xətası — config-i yoxla', 'error');
       return;
     }
     setPin(newPin);
     setIsHost(true);
+    gameSession.save({ pin: newPin, role: 'host' });
     setView(VIEWS.HOST_LOBBY);
   };
 
@@ -249,6 +301,12 @@ if (crowdPin && /^\d{6}$/.test(crowdPin)) {
   // Players read these same results — guaranteeing identical view.
 const handleShowResults = async () => {
   if (!pin) return;
+
+  // Atomic guard: only commits if status is still PLAYING. This stops the
+  // manual "Nəticələri göstər" click and the auto-timer from both racing
+  // through and double-awarding points if they fire at nearly the same time.
+  const begin = await gameAPI.beginShowResults(pin);
+  if (!begin.ok) { setView(VIEWS.HOST_RESULTS); return; }
 
   // ⚠️ CRITICAL FIX: React state (game) stale ola bilər.
   // Firebase-dən TƏZƏ data oxuyuruq ki, xallar sıfır görünməsin.
@@ -288,7 +346,6 @@ const handleShowResults = async () => {
   }
 
   updates['players'] = newPlayers;
-  updates['status']  = GAME_STATUS.SHOWING_RESULTS;
 
   await gameAPI.update(pin, updates);
   setView(VIEWS.HOST_RESULTS);
@@ -338,14 +395,17 @@ const handleShowResults = async () => {
     if (!name) { setNameError('Ad boş ola bilməz'); return; }
     const g = await gameAPI.get(pin);
     if (!g) { setNameError('Oyun tapılmadı'); return; }
-    const taken = Object.values(g.players || {}).some(p => p.name.toLowerCase() === name.toLowerCase());
-    if (taken) { setNameError('Bu ad artıq götürülüb'); return; }
 
+    // Atomic check-and-add — closes the race where two players submitting
+    // the same name at the same instant could both pass the taken-name check.
     const newId = genId();
-    await gameAPI.addPlayer(pin, newId, { name, score: 0, joinedAt: Date.now() });
+    const result = await gameAPI.addPlayerIfNameFree(pin, newId, { name, score: 0, joinedAt: Date.now() });
+    if (!result.ok) { setNameError('Bu ad artıq götürülüb'); return; }
+
     setPlayerId(newId);
     setPlayerName(name);
     setNameError('');
+    gameSession.save({ pin, role: 'player', playerId: newId, playerName: name });
     setView(VIEWS.PLAYER_LOBBY);
   };
 
@@ -372,11 +432,18 @@ const handleShowResults = async () => {
 
 {view === VIEWS.HOME && (
   <HomeView
-    onAdmin={() => setView(VIEWS.ADMIN_LIBRARY)}
-    onJoin={() => setView(VIEWS.PLAYER_JOIN)}
-    onCrowd={() => setView(VIEWS.CROWD_LANDING)}   // ← bu sətri əlavə et
+    onKahoot={() => setView(VIEWS.KAHOOT_LANDING)}
+    onCrowd={() => setView(VIEWS.CROWD_LANDING)}
   />
 )}
+
+      {view === VIEWS.KAHOOT_LANDING && (
+        <KahootLandingView
+          onBack={goHome}
+          onAdmin={() => setView(VIEWS.ADMIN_LIBRARY)}
+          onJoin={() => setView(VIEWS.PLAYER_JOIN)}
+        />
+      )}
 
       {view === VIEWS.ADMIN_LIBRARY && (
         <AdminLibraryView
@@ -433,7 +500,7 @@ const handleShowResults = async () => {
           setPinInput={setPinInput}
           error={joinError}
           onJoin={joinByPin}
-          onHome={goHome}
+          onHome={() => setView(VIEWS.KAHOOT_LANDING)}
         />
       )}
 

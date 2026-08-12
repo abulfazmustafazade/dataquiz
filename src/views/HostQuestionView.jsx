@@ -115,18 +115,9 @@ export default function HostQuestionView({ game, onShowResults }) {
         )}
 
         {q.type === 'sorting' && (
-          <div className="bg-white rounded-2xl p-6 mb-6">
-            <p className="font-bold text-gray-700 mb-3">Düzgün ardıcıllıq:</p>
-            <div className="space-y-2">
-              {q.items.map((item, i) => (
-                <div key={i} className="flex items-center gap-3 bg-purple-50 rounded-xl p-3">
-                  <div className="w-8 h-8 bg-purple-600 text-white rounded-lg flex items-center justify-center font-black text-sm">
-                    {i + 1}
-                  </div>
-                  <span className="font-bold text-gray-900">{item}</span>
-                </div>
-              ))}
-            </div>
+          <div className="bg-white/20 backdrop-blur rounded-2xl p-8 mb-6 text-center text-white">
+            <Edit3 size={48} className="mx-auto mb-3 opacity-80" />
+            <p className="text-xl font-bold">İştirakçılar sıralayır...</p>
           </div>
         )}
 
