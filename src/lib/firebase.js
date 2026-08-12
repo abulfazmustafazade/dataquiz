@@ -23,6 +23,7 @@ const analytics = getAnalytics(app);
 // =====================================================================
 
 export const FIREBASE_OK = firebaseConfig.apiKey !== "YOUR_API_KEY_HERE";
+let db= null;
 
 if (FIREBASE_OK) {
   try {
