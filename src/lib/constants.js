@@ -59,4 +59,8 @@ export const VIEWS = {
   PLAYER_ANSWERED: 'player-answered',
   PLAYER_RESULT: 'player-result',
   PLAYER_FINAL: 'player-final',
+  CROWD_LANDING: 'crowd-landing',
+CROWD_HOST: 'crowd-host',
+CROWD_JOIN: 'crowd-join',
+CROWD_PARTICIPANT: 'crowd-participant',
 };
