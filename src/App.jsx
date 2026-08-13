@@ -298,58 +298,58 @@ const [crowdSession, setCrowdSession] = useState(null);
   };
 
   // CRITICAL: Host computes scoring with scoreAnswer() and writes results back.
-  // Players read these same results — guaranteeing identical view.
-const handleShowResults = async () => {
-  if (!pin) return;
+  // Players read these same results — guaranteeing identical view. The status
+  // flip and the score writes happen in ONE atomic transaction (see
+  // gameAPI.finishQuestion) so no one ever sees "results showing" before the
+  // scores actually exist.
+  const handleShowResults = async () => {
+    if (!pin) return;
 
-  // Atomic guard: only commits if status is still PLAYING. This stops the
-  // manual "Nəticələri göstər" click and the auto-timer from both racing
-  // through and double-awarding points if they fire at nearly the same time.
-  const begin = await gameAPI.beginShowResults(pin);
-  if (!begin.ok) { setView(VIEWS.HOST_RESULTS); return; }
+    const { ok } = await gameAPI.finishQuestion(pin, (current) => {
+      const qIdx = current.currentQuestionIndex;
+      const q = current.questions[qIdx];
+      const ansForQ = current.answers?.[qIdx] || {};
+      const startedAt = current.questionStartedAt;
 
-  // ⚠️ CRITICAL FIX: React state (game) stale ola bilər.
-  // Firebase-dən TƏZƏ data oxuyuruq ki, xallar sıfır görünməsin.
-  const freshGame = await gameAPI.get(pin);
-  if (!freshGame) return;
+      const newAnswersForQ = { ...ansForQ };
+      const newPlayers = { ...(current.players || {}) };
 
-  const qIdx = freshGame.currentQuestionIndex;
-  const q = freshGame.questions[qIdx];
-  const ansForQ = freshGame.answers?.[qIdx] || {};
-  const startedAt = freshGame.questionStartedAt;
+      for (const [pid] of Object.entries(current.players || {})) {
+        const a = ansForQ[pid];
+        if (!a) continue;
 
-  const updates = {};
-  const newPlayers = { ...(freshGame.players || {}) };
+        const result = scoreAnswer(
+          q,
+          a,
+          a.answeredAt || (startedAt + totalSeconds(q) * 1000),
+          startedAt
+        );
 
-  for (const [pid] of Object.entries(freshGame.players || {})) {
-    const a = ansForQ[pid];
-    if (!a) continue;
+        newAnswersForQ[pid] = {
+          ...a,
+          correct: result.correct,
+          points: result.points,
+          correctness: result.correctness,
+          details: result.details || {},
+        };
 
-    const result = scoreAnswer(
-      q,
-      a,
-      a.answeredAt || (startedAt + totalSeconds(q) * 1000),
-      startedAt
-    );
+        newPlayers[pid] = {
+          ...newPlayers[pid],
+          score: (newPlayers[pid].score || 0) + result.points,
+        };
+      }
 
-    // Write canonical result back to Firebase (player reads this — no discrepancy)
-    updates[`answers/${qIdx}/${pid}/correct`]      = result.correct;
-    updates[`answers/${qIdx}/${pid}/points`]        = result.points;
-    updates[`answers/${qIdx}/${pid}/correctness`]   = result.correctness;
-    updates[`answers/${qIdx}/${pid}/details`]       = result.details || {};
+      return {
+        ...current,
+        answers: { ...(current.answers || {}), [qIdx]: newAnswersForQ },
+        players: newPlayers,
+        status: GAME_STATUS.SHOWING_RESULTS,
+      };
+    });
 
-    // Accumulate score
-    newPlayers[pid] = {
-      ...newPlayers[pid],
-      score: (newPlayers[pid].score || 0) + result.points,
-    };
-  }
-
-  updates['players'] = newPlayers;
-
-  await gameAPI.update(pin, updates);
-  setView(VIEWS.HOST_RESULTS);
-};
+    if (!ok) { setView(VIEWS.HOST_RESULTS); return; }
+    setView(VIEWS.HOST_RESULTS);
+  };
 
   const handleNextQuestion = async () => {
     if (!game || !pin) return;

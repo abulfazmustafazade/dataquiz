@@ -116,20 +116,28 @@ export const gameAPI = {
     }
   },
 
-  // Atomically move a game from PLAYING -> SHOWING_RESULTS. Returns ok:false
-  // if someone else already made this transition (guards against the manual
-  // "show results" button and the auto-timer both firing at once, which would
-  // otherwise double-award points).
-  beginShowResults: async (pin) => {
+  // Atomically score the current question AND move PLAYING -> SHOWING_RESULTS
+  // in a SINGLE write. `computeFn(current)` receives the live game object and
+  // must return the full updated game object (or undefined to abort).
+  //
+  // Both guarantees matter here:
+  //  - Guards against the manual "show results" button and the auto-timer
+  //    firing at once (only one commits, since it re-checks status is still
+  //    PLAYING), which would otherwise double-award points.
+  //  - Scores and the status flip land in the same commit, so no listener
+  //    (host or player) can ever observe SHOWING_RESULTS with answers that
+  //    aren't scored yet — which previously showed as a flash of "wrong" for
+  //    correct answers, and let the host/player screens briefly disagree.
+  finishQuestion: async (pin, computeFn) => {
     if (!db) return { ok: false };
     try {
-      const result = await runTransaction(ref(db, `games/${pin}/status`), (current) => {
-        if (current !== GAME_STATUS.PLAYING) return; // abort — already transitioning
-        return GAME_STATUS.SHOWING_RESULTS;
+      const result = await runTransaction(ref(db, `games/${pin}`), (current) => {
+        if (!current || current.status !== GAME_STATUS.PLAYING) return; // abort
+        return computeFn(current);
       });
-      return { ok: result.committed };
+      return { ok: result.committed, game: result.committed ? result.snapshot.val() : null };
     } catch (e) {
-      console.error('beginShowResults error:', e);
+      console.error('finishQuestion error:', e);
       return { ok: false };
     }
   },

@@ -127,16 +127,37 @@ export const crowdAPI = {
     } catch { return {}; }
   },
 
-  pollVote: async (pin, userId, optionIdx) => {
+  // pollIndex identifies WHICH poll question within the session (a session
+  // can hold multiple poll questions) — votes/counts are tracked per index.
+  pollVote: async (pin, userId, pollIndex, optionIdx) => {
     const db = getDb(); if (!db) return;
     try {
-      const prev = await get(ref(db, `crowd/${pin}/pollVotes/${userId}`));
+      const voteRef = ref(db, `crowd/${pin}/pollVotes/${pollIndex}/${userId}`);
+      const prev = await get(voteRef);
       const prevIdx = prev.val();
       if (prevIdx !== null && prevIdx !== undefined) {
-        await update(ref(db, `crowd/${pin}/pollCounts`), { [prevIdx]: increment(-1) });
+        await update(ref(db, `crowd/${pin}/pollCounts/${pollIndex}`), { [prevIdx]: increment(-1) });
       }
-      await set(ref(db, `crowd/${pin}/pollVotes/${userId}`), optionIdx);
-      await update(ref(db, `crowd/${pin}/pollCounts`), { [optionIdx]: increment(1) });
+      await set(voteRef, optionIdx);
+      await update(ref(db, `crowd/${pin}/pollCounts/${pollIndex}`), { [optionIdx]: increment(1) });
+    } catch (e) { console.error(e); }
+  },
+
+  // Switch which poll question is currently active/displayed
+  setCurrentPoll: async (pin, index) => {
+    const db = getDb(); if (!db) return;
+    try { await update(ref(db, `crowd/${pin}/prompt`), { currentIndex: index }); }
+    catch (e) { console.error(e); }
+  },
+
+  // Append a new poll question to a live session (host can keep adding
+  // questions after the session has already started)
+  addPollQuestion: async (pin, question) => {
+    const db = getDb(); if (!db) return;
+    try {
+      const snap = await get(ref(db, `crowd/${pin}/prompt/questions`));
+      const questions = snap.val() || [];
+      await update(ref(db, `crowd/${pin}/prompt`), { questions: [...questions, question] });
     } catch (e) { console.error(e); }
   },
 };

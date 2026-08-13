@@ -21,7 +21,7 @@ export default function HomeView({ onKahoot, onCrowd }) {
             transition={{ delay: 0.2, type: 'spring' }}
             className="text-6xl font-black text-white mb-3 tracking-tight drop-shadow-lg mt-6 gradient-text"
           >
-            BrainRushX!
+            QuizLive!
           </motion.h1>
           <motion.p
             initial={{ opacity: 0 }}
@@ -85,7 +85,7 @@ export default function HomeView({ onKahoot, onCrowd }) {
           transition={{ delay: 0.9 }}
           className="text-center text-purple-200 mt-10 text-sm"
         >
-          🧠 Your Knowledge. Your Crowd. Your Game.
+          Quiz · Crowd · Real vaxt · Firebase
         </motion.p>
       </motion.div>
     </div>
