@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { AlertCircle, UserPlus } from 'lucide-react';
 import AnimatedBackground from '../components/AnimatedBackground';
 import { GENDER_AVATARS } from '../lib/constants';
+import { avatarUrl } from '../lib/utils';
 
 export default function PlayerNameView({
   nameInput, setNameInput,
@@ -23,9 +24,13 @@ export default function PlayerNameView({
           <motion.div
             animate={{ scale: [1, 1.06, 1] }}
             transition={{ duration: 2, repeat: Infinity }}
-            className="w-20 h-20 mx-auto bg-pink-100 rounded-2xl flex items-center justify-center mb-4 text-4xl"
+            className="w-20 h-20 mx-auto bg-pink-100 rounded-2xl flex items-center justify-center mb-4 overflow-hidden"
           >
-            {avatarInput || <UserPlus size={36} className="text-pink-600" />}
+            {avatarInput ? (
+              <img src={avatarUrl(avatarInput)} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <UserPlus size={36} className="text-pink-600" />
+            )}
           </motion.div>
           <h2 className="text-3xl font-black text-gray-900 mb-2 text-center">Adın nədir?</h2>
           <p className="text-gray-600 mb-6 truncate text-center">{gameTitle} oyununa xoş gəldin</p>
@@ -57,18 +62,18 @@ export default function PlayerNameView({
             </button>
           </div>
 
-          <div className="grid grid-cols-6 gap-2 mb-6">
-            {options.map((emoji) => (
+          <div className="grid grid-cols-4 gap-2 mb-6 max-h-64 overflow-y-auto pr-1">
+            {options.map((charId) => (
               <motion.button
-                key={emoji}
+                key={charId}
                 type="button"
                 whileTap={{ scale: 0.9 }}
-                onClick={() => setAvatarInput(emoji)}
-                className={`aspect-square rounded-xl flex items-center justify-center text-2xl border-2 transition-all ${
-                  avatarInput === emoji ? 'border-pink-500 bg-pink-50 scale-105' : 'border-gray-200 hover:border-pink-300'
+                onClick={() => setAvatarInput(charId)}
+                className={`aspect-square rounded-xl overflow-hidden border-2 transition-all ${
+                  avatarInput === charId ? 'border-pink-500 bg-pink-50 scale-105' : 'border-gray-200 hover:border-pink-300'
                 }`}
               >
-                {emoji}
+                <img src={avatarUrl(charId)} alt="" className="w-full h-full object-cover" />
               </motion.button>
             ))}
           </div>

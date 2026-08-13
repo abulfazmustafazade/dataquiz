@@ -16,18 +16,18 @@ export const QUESTION_TYPES = {
   sorting:         { label: 'Sıralama (puzzle)',           icon: '🔢', short: 'Sıralama' },
 };
 
-// Avatar emojis — fallback, deterministically assigned when a player hasn't
-// picked one explicitly (e.g. older data, or the Crowd module)
-export const AVATARS = [
-  '🦁', '🐯', '🐺', '🦊', '🐱', '🐶', '🐼', '🐨', '🐸', '🐙',
-  '🦄', '🐲', '🦅', '🦉', '🐢', '🐬', '🦋', '🐝', '🦖', '🦒',
-  '🦔', '🐙', '🦩', '🦘', '🐧', '🦦', '🦝', '🐰', '🐿️', '🦫',
-];
-
-// Player-pickable avatars for the Kahoot name-entry screen, grouped by gender
+// Player-pickable game-character avatars for the Kahoot name-entry screen,
+// grouped by gender. Each id is a seed for an illustrated character portrait
+// (see lib/utils.js -> avatarUrl) — no emoji.
 export const GENDER_AVATARS = {
-  male: ['👨', '🧔', '👨‍🦰', '👨‍🦱', '👨‍🦳', '👨‍🦲', '🤵', '👨‍🎓', '👨‍💼', '👨‍🔬', '🕵️‍♂️', '🥷'],
-  female: ['👩', '👱‍♀️', '👩‍🦰', '👩‍🦱', '👩‍🦳', '👩‍🦲', '👰', '👩‍🎓', '👩‍💼', '👩‍🔬', '🕵️‍♀️', '🧕'],
+  male: [
+    'Warrior-Leo', 'Knight-Owen', 'Ranger-Kai', 'Mage-Finn', 'Rogue-Jack', 'Viking-Bjorn',
+    'Ninja-Ren', 'Pirate-Sam', 'Archer-Theo', 'Wizard-Eli', 'Hunter-Noah', 'Paladin-Max',
+  ],
+  female: [
+    'Warrior-Mia', 'Knight-Zoe', 'Ranger-Luna', 'Mage-Nova', 'Rogue-Ivy', 'Viking-Astrid',
+    'Ninja-Kira', 'Pirate-Rosa', 'Archer-Freya', 'Wizard-Aria', 'Hunter-Nyx', 'Paladin-Elin',
+  ],
 };
 
 export const PLAYER_COLORS = [

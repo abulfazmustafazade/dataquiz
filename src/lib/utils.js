@@ -1,4 +1,4 @@
-import { AVATARS, PLAYER_COLORS } from './constants';
+import { PLAYER_COLORS } from './constants';
 
 export const genPin = () => Math.floor(100000 + Math.random() * 900000).toString();
 export const genId = () => Math.random().toString(36).slice(2, 11) + Date.now().toString(36).slice(-4);
@@ -28,12 +28,11 @@ export const shuffle = (arr) => {
   return a;
 };
 
-// Pick deterministic avatar/color from a string seed (player id)
-export const avatarFor = (seed) => {
-  let hash = 0;
-  for (let i = 0; i < seed.length; i++) hash = ((hash << 5) - hash + seed.charCodeAt(i)) | 0;
-  return AVATARS[Math.abs(hash) % AVATARS.length];
-};
+// Illustrated game-character avatar (DiceBear "adventurer" style) for a given
+// seed — either a chosen character id (see GENDER_AVATARS) or a player's own
+// id/name as a deterministic fallback. No emoji involved.
+export const avatarUrl = (seed) =>
+  `https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(seed)}`;
 
 export const colorFor = (seed) => {
   let hash = 0;
