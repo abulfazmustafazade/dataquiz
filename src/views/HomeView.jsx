@@ -21,7 +21,7 @@ export default function HomeView({ onKahoot, onCrowd }) {
             transition={{ delay: 0.2, type: 'spring' }}
             className="text-6xl font-black text-white mb-3 tracking-tight drop-shadow-lg mt-6 gradient-text"
           >
-            QuizLive!
+            BrainRushX!
           </motion.h1>
           <motion.p
             initial={{ opacity: 0 }}
@@ -52,7 +52,7 @@ export default function HomeView({ onKahoot, onCrowd }) {
             </div>
             <p className="text-gray-500 text-sm mb-4">Quiz yarat və ya PIN ilə canlı yarışa qoşul.</p>
             <div className="flex items-center gap-1 text-purple-600 font-bold text-sm">
-              Admin · İştirakçı <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+              Sesiya · İştirakçı <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
             </div>
           </motion.button>
 
@@ -85,7 +85,7 @@ export default function HomeView({ onKahoot, onCrowd }) {
           transition={{ delay: 0.9 }}
           className="text-center text-purple-200 mt-10 text-sm"
         >
-          Quiz · Crowd · Real vaxt · Firebase
+          🧠 Your Knowledge. Your Crowd. Your Game.
         </motion.p>
       </motion.div>
     </div>
