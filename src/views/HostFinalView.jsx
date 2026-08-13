@@ -80,7 +80,7 @@ export default function HostFinalView({ game, onHome }) {
 
                     {/* Avatar with ring */}
                     <div className={`ring-4 ${cfg.ring} rounded-full`}>
-                      <Avatar name={player.name} id={player.id} size={rank === 0 ? 'xl' : 'lg'} showName={false} />
+                      <Avatar name={player.name} id={player.id} avatar={player.avatar} size={rank === 0 ? 'xl' : 'lg'} showName={false} />
                     </div>
 
                     <p className="font-black text-white mt-2 text-center truncate max-w-[120px] text-sm sm:text-base">
@@ -131,7 +131,7 @@ export default function HostFinalView({ game, onHome }) {
                   className="flex items-center gap-3 bg-white/10 rounded-xl px-4 py-3"
                 >
                   <span className="text-white font-black w-6 text-center opacity-70">#{idx + 4}</span>
-                  <Avatar name={p.name} id={p.id} size="xs" showName={false} />
+                  <Avatar name={p.name} id={p.id} avatar={p.avatar} size="xs" showName={false} />
                   <span className="flex-1 font-bold text-white truncate">{p.name}</span>
                   <span className="font-black text-amber-300 text-lg">{p.score || 0}</span>
                 </motion.div>

@@ -16,7 +16,7 @@ export default function PlayerLobbyView({ playerName, playerId, game }) {
           animate={{ scale: 1, rotate: 0 }}
           transition={{ type: 'spring', stiffness: 200 }}
         >
-          <Avatar name={playerName} id={playerId} size="xl" showName={false} className="mx-auto mb-6" />
+          <Avatar name={playerName} id={playerId} avatar={game?.players?.[playerId]?.avatar} size="xl" showName={false} className="mx-auto mb-6" />
         </motion.div>
         <motion.p
           initial={{ opacity: 0 }}

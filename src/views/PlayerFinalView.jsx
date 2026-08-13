@@ -92,7 +92,7 @@ export default function PlayerFinalView({ playerId, playerName, game, onHome }) 
           transition={{ delay: 0.6, type: 'spring' }}
           className="mb-6"
         >
-          <Avatar name={playerName} id={playerId} size="xl" showName={false} className="mx-auto" />
+          <Avatar name={playerName} id={playerId} avatar={game?.players?.[playerId]?.avatar} size="xl" showName={false} className="mx-auto" />
           <p className="text-2xl font-black mt-2">{playerName}</p>
         </motion.div>
 

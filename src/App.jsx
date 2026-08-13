@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { VIEWS, GAME_STATUS } from './lib/constants';
+import { VIEWS, GAME_STATUS, GENDER_AVATARS } from './lib/constants';
 import { genId, totalSeconds, createWithUniquePin } from './lib/utils';
 import { quizLib } from './lib/storage';
 import { gameAPI, FIREBASE_OK } from './lib/firebase';
@@ -58,6 +58,8 @@ const [crowdSession, setCrowdSession] = useState(null);
   // Player input state
   const [pinInput, setPinInput] = useState('');
   const [nameInput, setNameInput] = useState('');
+  const [gender, setGender] = useState('male');
+  const [avatarInput, setAvatarInput] = useState(GENDER_AVATARS.male[0]);
   const [joinError, setJoinError] = useState('');
   const [nameError, setNameError] = useState('');
 
@@ -129,6 +131,8 @@ const [crowdSession, setCrowdSession] = useState(null);
     setPlayerName('');
     setPinInput('');
     setNameInput('');
+    setGender('male');
+    setAvatarInput(GENDER_AVATARS.male[0]);
     setJoinError('');
     setNameError('');
     setEditingQuiz(null);
@@ -399,7 +403,8 @@ const [crowdSession, setCrowdSession] = useState(null);
     // Atomic check-and-add — closes the race where two players submitting
     // the same name at the same instant could both pass the taken-name check.
     const newId = genId();
-    const result = await gameAPI.addPlayerIfNameFree(pin, newId, { name, score: 0, joinedAt: Date.now() });
+    const avatar = avatarInput || GENDER_AVATARS[gender]?.[0] || GENDER_AVATARS.male[0];
+    const result = await gameAPI.addPlayerIfNameFree(pin, newId, { name, score: 0, joinedAt: Date.now(), avatar });
     if (!result.ok) { setNameError('Bu ad artıq götürülüb'); return; }
 
     setPlayerId(newId);
@@ -508,6 +513,10 @@ const [crowdSession, setCrowdSession] = useState(null);
         <PlayerNameView
           nameInput={nameInput}
           setNameInput={setNameInput}
+          gender={gender}
+          setGender={setGender}
+          avatarInput={avatarInput}
+          setAvatarInput={setAvatarInput}
           error={nameError}
           gameTitle={game?.title || ''}
           onSubmit={submitName}

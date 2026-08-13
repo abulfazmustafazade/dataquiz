@@ -117,7 +117,7 @@ export default function HostLobbyView({ pin, game, onHome, onStart }) {
                       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                     >
                       <div className="flex flex-col items-center gap-1 bg-purple-50 rounded-xl p-2">
-                        <Avatar name={p.name} id={id} size="md" showName={false} />
+                        <Avatar name={p.name} id={id} avatar={p.avatar} size="md" showName={false} />
                         <span className="text-xs font-bold text-purple-900 truncate max-w-full">{p.name}</span>
                       </div>
                     </motion.div>

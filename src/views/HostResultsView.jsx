@@ -110,7 +110,7 @@ export default function HostResultsView({ game, onNext }) {
                   }`}>
                     {idx + 1}
                   </div>
-                  <Avatar name={p.name} id={p.id} size="xs" showName={false} />
+                  <Avatar name={p.name} id={p.id} avatar={p.avatar} size="xs" showName={false} />
                   <span className="flex-1 font-bold text-gray-900 truncate">{p.name}</span>
                   {a && (
                     <span className={`text-xs font-bold px-2 py-1 rounded ${a.correct ? 'bg-emerald-100 text-emerald-700' : a.correctness > 0 ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700'}`}>

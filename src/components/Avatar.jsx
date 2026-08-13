@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
 import { avatarFor, colorFor } from '../lib/utils';
 
-export default function Avatar({ name, id, size = 'md', showName = true, className = '' }) {
+export default function Avatar({ name, id, avatar, size = 'md', showName = true, className = '' }) {
   const sizes = {
     xs: 'w-8 h-8 text-base',
     sm: 'w-10 h-10 text-lg',
@@ -10,7 +10,9 @@ export default function Avatar({ name, id, size = 'md', showName = true, classNa
     xl: 'w-20 h-20 text-4xl',
   };
   const seed = id || name || 'default';
-  const avatar = avatarFor(seed);
+  // Use the player's own chosen avatar when there is one; otherwise fall
+  // back to a deterministic pick (older players, Crowd, etc.)
+  const emoji = avatar || avatarFor(seed);
   const color = colorFor(seed);
 
   return (
@@ -21,7 +23,7 @@ export default function Avatar({ name, id, size = 'md', showName = true, classNa
         transition={{ type: 'spring', stiffness: 300, damping: 20 }}
         className={`${sizes[size]} rounded-full bg-gradient-to-br ${color} flex items-center justify-center shadow-lg ring-2 ring-white`}
       >
-        <span>{avatar}</span>
+        <span>{emoji}</span>
       </motion.div>
       {showName && <span className="text-xs font-bold text-white truncate max-w-[80px]">{name}</span>}
     </div>

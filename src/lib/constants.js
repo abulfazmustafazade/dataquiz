@@ -16,12 +16,19 @@ export const QUESTION_TYPES = {
   sorting:         { label: 'Sıralama (puzzle)',           icon: '🔢', short: 'Sıralama' },
 };
 
-// Avatar emojis — random one assigned to each player
+// Avatar emojis — fallback, deterministically assigned when a player hasn't
+// picked one explicitly (e.g. older data, or the Crowd module)
 export const AVATARS = [
   '🦁', '🐯', '🐺', '🦊', '🐱', '🐶', '🐼', '🐨', '🐸', '🐙',
   '🦄', '🐲', '🦅', '🦉', '🐢', '🐬', '🦋', '🐝', '🦖', '🦒',
   '🦔', '🐙', '🦩', '🦘', '🐧', '🦦', '🦝', '🐰', '🐿️', '🦫',
 ];
+
+// Player-pickable avatars for the Kahoot name-entry screen, grouped by gender
+export const GENDER_AVATARS = {
+  male: ['👨', '🧔', '👨‍🦰', '👨‍🦱', '👨‍🦳', '👨‍🦲', '🤵', '👨‍🎓', '👨‍💼', '👨‍🔬', '🕵️‍♂️', '🥷'],
+  female: ['👩', '👱‍♀️', '👩‍🦰', '👩‍🦱', '👩‍🦳', '👩‍🦲', '👰', '👩‍🎓', '👩‍💼', '👩‍🔬', '🕵️‍♀️', '🧕'],
+};
 
 export const PLAYER_COLORS = [
   'from-rose-500 to-pink-600',
